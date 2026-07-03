@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>套房出租管理系統</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <div class="bg-orb bg-orb-a"></div>
+    <div class="bg-orb bg-orb-b"></div>
+
+    <div class="app-frame">
+      <header class="top-shell">
+        <div class="brand-block">
+          <p class="overline">新埔八街28號3樓</p>
+          <h1>套房出租管理系統</h1>
+          <p class="brand-copy">登入 Google 帳號後讀取後臺主表與附件資料夾，直接開啟你的出租管理工作區。</p>
+        </div>
+        <div class="top-actions">
+          <div class="login-panel" id="login-panel"></div>
+        </div>
+      </header>
+
+      <nav class="primary-nav" id="primary-nav"></nav>
+      <nav class="secondary-nav" id="secondary-nav"></nav>
+
+      <main id="app-content" class="page-shell"></main>
+    </div>
+
+    <dialog class="modal" id="record-modal">
+      <form method="dialog" class="modal-card" id="record-form"></form>
+    </dialog>
+
+    <template id="empty-template">
+      <section class="panel empty-panel">
+        <p class="overline">尚無資料</p>
+        <h3>這個區塊目前沒有紀錄</h3>
+        <p>可使用上方新增功能建立資料，或先用示範資料檢查畫面與流程。</p>
+      </section>
+    </template>
+
+    <script src="./config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

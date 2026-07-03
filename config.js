@@ -1,0 +1,1 @@
+window.RENTAL_GOOGLE_CLIENT_ID = "";
