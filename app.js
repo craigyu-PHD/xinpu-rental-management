@@ -1,20 +1,20 @@
 const LOCAL_KEY = "tenant-rental-system-v3";
 const GOOGLE_CLIENT_ID = window.RENTAL_GOOGLE_CLIENT_ID || localStorage.getItem("rental-google-client-id") || "";
-const GOOGLE_SCOPES = "openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
+const GOOGLE_SCOPES = "openid email profile https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets";
 const DEFAULT_WORKSPACE = {
-  mainFolderId: "1oU8FGtekTQD9G00UlIAeVZGTFuzNFNpd",
-  mainFolderUrl: "https://drive.google.com/drive/folders/1oU8FGtekTQD9G00UlIAeVZGTFuzNFNpd",
-  sheetId: "1Zfc0OvFh3rdHT4qywdcgvH8RpZDaFUKfp-MXkr3mc9k",
-  sheetUrl: "https://docs.google.com/spreadsheets/d/1Zfc0OvFh3rdHT4qywdcgvH8RpZDaFUKfp-MXkr3mc9k/edit?usp=drivesdk",
-  ownerEmail: "yu731108@gmail.com",
+  mainFolderId: "1EkzIQ4_0vVjruU0j8jED9FwV6hBkS43k",
+  mainFolderUrl: "https://drive.google.com/drive/folders/1EkzIQ4_0vVjruU0j8jED9FwV6hBkS43k",
+  sheetId: "1GNLdYv7inuU4U1jSlsG403XTqwbFbx2VfFmm1RYDu7w",
+  sheetUrl: "https://docs.google.com/spreadsheets/d/1GNLdYv7inuU4U1jSlsG403XTqwbFbx2VfFmm1RYDu7w/edit?usp=drivesdk",
+  ownerEmail: "craigpop.tw@gmail.com",
   folders: {
-    backend: "16lepXDUrjYcVBX3kLFHqoOiIW10-2Kqb",
-    leases: "1JQAFD5eyujxPEM9sq-IbmWLG5vjOF9I7",
-    taipower: "12-_PQ7FlXtTYJu1rPQZ79_K1xzCXwAhh",
-    meters: "10WajNa8b78ri6yo3rmn_MrR4oRJoOiuG",
-    maintenance: "1JoIWcT3j2tSvwKWbL419bnUBn22GnCGq",
-    receipts: "1O8ER92C17XeiiBED0A_JXBJV0xuZX0b7",
-    tenants: "171J9m9AE9pmpGZZvz5K9Wry2dNCiX7JB",
+    excel: "1cOMrkpd8le8wgsJB3A6xGuXcb0pJDpv-",
+    leases: "1__J1hdE2d-D9dgQ5q2yLRg2uL_EKZLF-",
+    taipower: "12iKbeUDjiXPBGWwSN5V6sS_Mc0eo_ams",
+    meters: "1XjahCEKLVQH2oix4tOzS8R_wp1N3qim4",
+    maintenance: "1I8mKvwxCxCKFWw0D9ob0JG4ofW8xCu-t",
+    receipts: "1UkOwtFphiDorG3UH1wnCefmH6jVC8W4c",
+    tenants: "1uoLJOoxRuD5JVQzkYrpuww2vnFVfNaOC",
   },
 };
 const WORKSPACE_BLUEPRINT = [
@@ -949,6 +949,7 @@ function handleGoogleLogin() {
         googleAccessTokenExpiresAt = Date.now() + Number(tokenResponse.expires_in || 3600) * 1000;
         googleProfile = await fetchGoogleProfile();
         saveGoogleSession();
+        await initializeActiveWorkspaceSheets({ silent: true });
         render();
       },
     });
@@ -1115,6 +1116,23 @@ async function createManagedWorkspace() {
   }
 }
 
+async function initializeActiveWorkspaceSheets({ silent = false } = {}) {
+  if (!hasActiveGoogleToken()) return false;
+  const workspace = getWorkspace();
+  if (!workspace.sheetId) return false;
+  if (workspace.ownerEmail && googleProfile?.email && workspace.ownerEmail !== googleProfile.email) return false;
+
+  try {
+    await ensureBackendSheets(workspace.sheetId);
+    state.connection.lastSyncedAt = new Date().toISOString();
+    persistState();
+    return true;
+  } catch (error) {
+    if (!silent) window.alert(`初始化後臺主表失敗：${error.message}`);
+    return false;
+  }
+}
+
 async function createDriveFolder(name, parentId = "") {
   const metadata = {
     name,
@@ -1164,6 +1182,13 @@ async function moveDriveFileToFolder(fileId, parentId) {
 }
 
 async function ensureBackendSheets(spreadsheetId) {
+  const metaResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`, {
+    headers: { Authorization: `Bearer ${googleAccessToken}` },
+  });
+  if (!metaResponse.ok) throw new Error(await metaResponse.text());
+  const meta = await metaResponse.json();
+  const existingSheets = new Set((meta.sheets || []).map((sheet) => sheet.properties?.title).filter(Boolean));
+
   const requests = [
     { updateSpreadsheetProperties: { properties: { locale: "zh_TW", timeZone: "Asia/Taipei" }, fields: "locale,timeZone" } },
   ];
@@ -1179,17 +1204,21 @@ async function ensureBackendSheets(spreadsheetId) {
     ["附件中心", ["附件編號", "日期", "模組", "類型", "房號", "租客", "關聯紀錄", "檔名", "Drive連結", "備註"]],
     ["總帳明細", ["明細編號", "日期", "月份", "房號", "項目", "分類", "收入", "支出", "附件連結", "備註"]],
   ];
-  sheets.forEach((item) => requests.push({ addSheet: { properties: { title: item[0] } } }));
+  sheets
+    .filter((item) => !existingSheets.has(item[0]))
+    .forEach((item) => requests.push({ addSheet: { properties: { title: item[0] } } }));
 
-  const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${googleAccessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ requests }),
-  });
-  if (!response.ok) throw new Error(await response.text());
+  if (requests.length) {
+    const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${googleAccessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ requests }),
+    });
+    if (!response.ok) throw new Error(await response.text());
+  }
 
   for (const [sheetName, headers] of sheets) {
     const range = encodeURIComponent(`${sheetName}!A1:${String.fromCharCode(64 + headers.length)}1`);
