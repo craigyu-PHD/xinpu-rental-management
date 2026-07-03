@@ -6,6 +6,10 @@
 - 圖片、PDF、租約、收據等附件分類上傳到 Google Drive 子資料夾。
 - 前端使用 Google Identity Services 取得 Drive 與 Sheets 權限。
 
+## 網站
+
+https://craigyu-phd.github.io/xinpu-rental-management/
+
 ## Google 登入設定
 
 正式登入需要 Google Cloud OAuth Client ID。建立 OAuth 用戶端後，把 Client ID 填入 `config.js`：
@@ -20,7 +24,12 @@ OAuth 授權來源需加入 GitHub Pages 網址，例如：
 https://craigyu-phd.github.io
 ```
 
-授權重新導向 URI 不是必要項，因為本系統使用瀏覽器端 token flow。
+測試時也可以直接在首頁按「使用 Google 登入」，系統會要求貼上 Client ID，並存在該瀏覽器的 localStorage。授權重新導向 URI 不是必要項，因為本系統使用瀏覽器端 token flow。
+
+需要啟用的 API：
+
+- Google Drive API
+- Google Sheets API
 
 ## Drive 工作區
 
