@@ -1,7 +1,7 @@
 const LOCAL_KEY = "tenant-rental-system-v3";
 const GOOGLE_CLIENT_ID = window.RENTAL_GOOGLE_CLIENT_ID || localStorage.getItem("rental-google-client-id") || "";
 const GOOGLE_SCOPES = "openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
-const DRIVE_WORKSPACE = {
+const DEFAULT_WORKSPACE = {
   mainFolderId: "1oU8FGtekTQD9G00UlIAeVZGTFuzNFNpd",
   mainFolderUrl: "https://drive.google.com/drive/folders/1oU8FGtekTQD9G00UlIAeVZGTFuzNFNpd",
   sheetId: "1Zfc0OvFh3rdHT4qywdcgvH8RpZDaFUKfp-MXkr3mc9k",
@@ -17,6 +17,15 @@ const DRIVE_WORKSPACE = {
     tenants: "171J9m9AE9pmpGZZvz5K9Wry2dNCiX7JB",
   },
 };
+const WORKSPACE_BLUEPRINT = [
+  { key: "excel", name: "01_Excel表" },
+  { key: "leases", name: "02_租約照片" },
+  { key: "taipower", name: "03_臺電帳單照片" },
+  { key: "meters", name: "04_電表照片" },
+  { key: "maintenance", name: "05_維修照片" },
+  { key: "receipts", name: "06_收款憑證照片" },
+  { key: "tenants", name: "07_租客照片" },
+];
 
 const MODULES = {
   dashboard: { id: "dashboard", title: "今日總覽", group: "overview" },
@@ -85,6 +94,12 @@ function buildExcelPreset() {
       googleClientId: "",
       googleApiKey: "",
       googleFolderId: "",
+      workspaceOwnerEmail: "",
+      workspaceMainFolderId: "",
+      workspaceMainFolderUrl: "",
+      workspaceSheetId: "",
+      workspaceSheetUrl: "",
+      workspaceFolders: {},
       lastSyncedAt: "",
     },
     rooms: [
@@ -272,9 +287,11 @@ function applyTheme() {
 }
 
 function renderLoginPanel() {
+  const workspace = getWorkspace();
   const signedIn = Boolean(googleProfile?.email);
   const activeToken = hasActiveGoogleToken();
-  const accessMismatch = signedIn && googleProfile.email !== DRIVE_WORKSPACE.ownerEmail;
+  const usingPersonalWorkspace = state.connection.workspaceOwnerEmail === googleProfile?.email;
+  const accessMismatch = signedIn && workspace.ownerEmail && googleProfile.email !== workspace.ownerEmail;
   const statusClass = signedIn ? "success" : GOOGLE_CLIENT_ID ? "" : "danger";
   const statusText = signedIn
     ? activeToken
@@ -288,11 +305,12 @@ function renderLoginPanel() {
     <h3>${signedIn ? escapeHtml(googleProfile.name || "Google 使用者") : "登入 Google 帳號讀取後臺資料"}</h3>
     <div class="sync-pill ${statusClass}">${escapeHtml(statusText)}</div>
     <div class="meta-line">流程：開啟系統 → Google 登入 → 讀取後臺主表 → 上傳附件到 Drive 子資料夾 → 自動把檔案連結回寫主表。</div>
-    <div class="meta-line">目前主資料夾建立在 ${escapeHtml(DRIVE_WORKSPACE.ownerEmail)}。${accessMismatch ? "你現在登入的帳號和資料夾擁有者不同，所以點進資料夾會要求權限。" : "若使用同一個擁有者帳號登入，資料會直接存到這個共用資料夾。"} </div>
+    <div class="meta-line">目前作用中的儲存位置屬於 ${escapeHtml(workspace.ownerEmail || "尚未設定")}。${accessMismatch ? "你現在登入的帳號和資料夾擁有者不同，所以點進資料夾會要求權限。" : "若使用同一個擁有者帳號登入，資料會直接存到這個共用資料夾。"} </div>
     <div class="toolbar">
       <button class="cta-btn" id="google-login-button">${signedIn ? (activeToken ? "重新授權 Google" : "重新連線 Google") : "使用 Google 登入"}</button>
-      <a class="soft-btn" href="${DRIVE_WORKSPACE.mainFolderUrl}" target="_blank" rel="noreferrer">雲端資料夾</a>
-      <a class="soft-btn" href="${DRIVE_WORKSPACE.sheetUrl}" target="_blank" rel="noreferrer">後臺主表</a>
+      ${signedIn ? `<button class="soft-btn" id="create-drive-workspace">${usingPersonalWorkspace ? "重建我的雲端工作區" : "建立我的雲端工作區"}</button>` : ""}
+      <a class="soft-btn" href="${workspace.mainFolderUrl}" target="_blank" rel="noreferrer">雲端資料夾</a>
+      <a class="soft-btn" href="${workspace.sheetUrl}" target="_blank" rel="noreferrer">後臺主表</a>
     </div>
   `;
 }
@@ -857,6 +875,8 @@ function renderReports() {
 }
 
 function renderSettings() {
+  const workspace = getWorkspace();
+  const folderNames = WORKSPACE_BLUEPRINT.map((item) => item.name).join("、");
   return `
     ${moduleBanner("系統與儲存", "這裡不再放技術設定，而是直接用你看得懂的資料入口與備份結構說明。")}
     <section class="two-grid">
@@ -865,10 +885,10 @@ function renderSettings() {
           <div><p class="overline">Google 雲端入口</p><h3>主資料夾、主表與附件結構</h3></div>
         </div>
         <div class="sync-detail">
-          <div class="alert-card">目前資料實際會存到這裡：主資料夾由 ${DRIVE_WORKSPACE.ownerEmail} 建立，後臺主表放在 00_後臺主表，租約、臺電帳單、電表照片、維修附件、收款憑證、租客附件各有自己的子資料夾。</div>
+          <div class="alert-card">目前資料實際會存到這裡：主資料夾屬於 ${workspace.ownerEmail || "尚未設定"}，後臺主表放在 01_Excel表，照片與 PDF 會依序進入 ${folderNames} 這些子資料夾。</div>
           <div class="toolbar">
-            <a class="cta-btn" href="${DRIVE_WORKSPACE.mainFolderUrl}" target="_blank" rel="noreferrer">開啟主資料夾</a>
-            <a class="soft-btn" href="${DRIVE_WORKSPACE.sheetUrl}" target="_blank" rel="noreferrer">開啟後臺主表</a>
+            <a class="cta-btn" href="${workspace.mainFolderUrl}" target="_blank" rel="noreferrer">開啟主資料夾</a>
+            <a class="soft-btn" href="${workspace.sheetUrl}" target="_blank" rel="noreferrer">開啟後臺主表</a>
           </div>
         </div>
       </article>
@@ -984,20 +1004,21 @@ async function uploadAttachmentToDrive(file, meta) {
 }
 
 function resolveAttachmentFolder(meta) {
-  if (meta.module === "租約") return DRIVE_WORKSPACE.folders.leases;
-  if (meta.module === "臺電帳單") return DRIVE_WORKSPACE.folders.taipower;
-  if (meta.module === "電表抄表") return DRIVE_WORKSPACE.folders.meters;
-  if (meta.module === "維修") return DRIVE_WORKSPACE.folders.maintenance;
-  if (meta.module === "收款") return DRIVE_WORKSPACE.folders.receipts;
-  if (meta.module === "租客") return DRIVE_WORKSPACE.folders.tenants;
-  return DRIVE_WORKSPACE.folders.backend;
+  const workspace = getWorkspace();
+  if (meta.module === "租約") return workspace.folders.leases;
+  if (meta.module === "臺電帳單") return workspace.folders.taipower;
+  if (meta.module === "電表抄表") return workspace.folders.meters;
+  if (meta.module === "維修") return workspace.folders.maintenance;
+  if (meta.module === "收款") return workspace.folders.receipts;
+  if (meta.module === "租客") return workspace.folders.tenants;
+  return workspace.folders.excel || workspace.mainFolderId;
 }
 
 async function appendAttachmentToSheet(attachment) {
   if (!hasActiveGoogleToken()) return false;
   await ensureAttachmentSheet();
   const range = encodeURIComponent("附件中心!A:J");
-  const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${DRIVE_WORKSPACE.sheetId}/values/${range}:append?valueInputOption=USER_ENTERED`, {
+  const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${getWorkspace().sheetId}/values/${range}:append?valueInputOption=USER_ENTERED`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${googleAccessToken}`,
@@ -1027,7 +1048,7 @@ async function appendAttachmentToSheet(attachment) {
 }
 
 async function ensureAttachmentSheet() {
-  const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${DRIVE_WORKSPACE.sheetId}:batchUpdate`, {
+  const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${getWorkspace().sheetId}:batchUpdate`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${googleAccessToken}`,
@@ -1046,7 +1067,7 @@ async function ensureAttachmentSheet() {
   }
 
   const headerRange = encodeURIComponent("附件中心!A1:J1");
-  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${DRIVE_WORKSPACE.sheetId}/values/${headerRange}?valueInputOption=USER_ENTERED`, {
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${getWorkspace().sheetId}/values/${headerRange}?valueInputOption=USER_ENTERED`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${googleAccessToken}`,
@@ -1058,10 +1079,141 @@ async function ensureAttachmentSheet() {
   });
 }
 
+async function createManagedWorkspace() {
+  if (!hasActiveGoogleToken() || !googleProfile?.email) {
+    window.alert("請先登入 Google 帳號，再建立你的雲端工作區。");
+    return;
+  }
+
+  const createButton = document.querySelector("#create-drive-workspace");
+  if (createButton) createButton.textContent = "建立中...";
+
+  try {
+    const mainFolder = await createDriveFolder("013_新埔八街出租管理系統");
+    const folderMap = {};
+    for (const item of WORKSPACE_BLUEPRINT) {
+      const folder = await createDriveFolder(item.name, mainFolder.id);
+      folderMap[item.key] = folder.id;
+    }
+
+    const spreadsheet = await createBackendSpreadsheet("新埔八街出租管理系統_後臺主表");
+    await moveDriveFileToFolder(spreadsheet.spreadsheetId, folderMap.excel);
+    await ensureBackendSheets(spreadsheet.spreadsheetId);
+
+    state.connection.workspaceOwnerEmail = googleProfile.email;
+    state.connection.workspaceMainFolderId = mainFolder.id;
+    state.connection.workspaceMainFolderUrl = `https://drive.google.com/drive/folders/${mainFolder.id}`;
+    state.connection.workspaceSheetId = spreadsheet.spreadsheetId;
+    state.connection.workspaceSheetUrl = spreadsheet.spreadsheetUrl;
+    state.connection.workspaceFolders = folderMap;
+    persistState();
+    render();
+    window.alert("已在你目前登入的 Google 帳號底下建立新的雲端工作區。");
+  } catch (error) {
+    window.alert(`建立雲端工作區失敗：${error.message}`);
+    render();
+  }
+}
+
+async function createDriveFolder(name, parentId = "") {
+  const metadata = {
+    name,
+    mimeType: "application/vnd.google-apps.folder",
+  };
+  if (parentId) metadata.parents = [parentId];
+  const response = await fetch("https://www.googleapis.com/drive/v3/files?fields=id,name,webViewLink,parents", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${googleAccessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(metadata),
+  });
+  if (!response.ok) throw new Error(await response.text());
+  return response.json();
+}
+
+async function createBackendSpreadsheet(title) {
+  const response = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${googleAccessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      properties: { title },
+      sheets: [{ properties: { title: "總覽設定" } }],
+    }),
+  });
+  if (!response.ok) throw new Error(await response.text());
+  return response.json();
+}
+
+async function moveDriveFileToFolder(fileId, parentId) {
+  const metaResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=parents`, {
+    headers: { Authorization: `Bearer ${googleAccessToken}` },
+  });
+  if (!metaResponse.ok) throw new Error(await metaResponse.text());
+  const meta = await metaResponse.json();
+  const removeParents = (meta.parents || []).join(",");
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?addParents=${encodeURIComponent(parentId)}&removeParents=${encodeURIComponent(removeParents)}&fields=id,parents`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${googleAccessToken}` },
+  });
+  if (!response.ok) throw new Error(await response.text());
+}
+
+async function ensureBackendSheets(spreadsheetId) {
+  const requests = [
+    { updateSpreadsheetProperties: { properties: { locale: "zh_TW", timeZone: "Asia/Taipei" }, fields: "locale,timeZone" } },
+  ];
+  const sheets = [
+    ["房間資料", ["房號", "房名", "狀態", "月租金", "押金", "收租日", "設備", "備註", "更新時間"]],
+    ["租客資料", ["租客編號", "姓名", "電話", "LINE", "職業", "緊急聯絡人", "房號", "入住日", "退租日", "備註", "更新時間"]],
+    ["租約資料", ["租約編號", "房號", "租客編號", "起租日", "到期日", "月租金", "押金", "收租日", "狀態", "租約附件連結", "備註", "更新時間"]],
+    ["收款紀錄", ["收款編號", "月份", "房號", "租客編號", "應收日", "應收金額", "實收金額", "收款日", "方式", "狀態", "憑證連結", "備註"]],
+    ["臺電帳單", ["帳單編號", "帳單名稱", "起始日", "結束日", "公共電費", "室內電費", "繳費期限", "是否已繳臺電", "繳費日", "帳單附件連結", "備註"]],
+    ["電表抄表", ["抄表編號", "帳單編號", "房號", "前期度數", "本期度數", "使用度數", "負擔者", "照片連結", "備註"]],
+    ["支出紀錄", ["支出編號", "日期", "月份", "類型", "範圍", "金額", "付款者", "是否已付款", "關聯維修", "收據連結", "備註"]],
+    ["維修紀錄", ["維修編號", "房號", "通報者", "通報日", "類型", "狀態", "費用", "負擔者", "廠商", "完成日", "附件連結", "備註"]],
+    ["附件中心", ["附件編號", "日期", "模組", "類型", "房號", "租客", "關聯紀錄", "檔名", "Drive連結", "備註"]],
+    ["總帳明細", ["明細編號", "日期", "月份", "房號", "項目", "分類", "收入", "支出", "附件連結", "備註"]],
+  ];
+  sheets.forEach((item) => requests.push({ addSheet: { properties: { title: item[0] } } }));
+
+  const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${googleAccessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ requests }),
+  });
+  if (!response.ok) throw new Error(await response.text());
+
+  for (const [sheetName, headers] of sheets) {
+    const range = encodeURIComponent(`${sheetName}!A1:${String.fromCharCode(64 + headers.length)}1`);
+    const headerResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${googleAccessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ values: [headers] }),
+    });
+    if (!headerResponse.ok) throw new Error(await headerResponse.text());
+  }
+}
+
 function bindDynamicActions() {
   const googleLoginButton = document.querySelector("#google-login-button");
   if (googleLoginButton) {
     googleLoginButton.addEventListener("click", handleGoogleLogin);
+  }
+
+  const createDriveWorkspaceButton = document.querySelector("#create-drive-workspace");
+  if (createDriveWorkspaceButton) {
+    createDriveWorkspaceButton.addEventListener("click", createManagedWorkspace);
   }
 
   document.querySelectorAll("[data-add]").forEach((button) => {
@@ -1428,6 +1580,20 @@ function sanitizeState(rawState) {
   next.maintenance = (next.maintenance || []).filter((item) => !String(item.note || "").includes("示意"));
   next.attachments = (next.attachments || []).filter((item) => !String(item.url || "").startsWith("drive://"));
   return next;
+}
+
+function getWorkspace() {
+  if (state.connection.workspaceMainFolderId && state.connection.workspaceSheetId) {
+    return {
+      mainFolderId: state.connection.workspaceMainFolderId,
+      mainFolderUrl: state.connection.workspaceMainFolderUrl || `https://drive.google.com/drive/folders/${state.connection.workspaceMainFolderId}`,
+      sheetId: state.connection.workspaceSheetId,
+      sheetUrl: state.connection.workspaceSheetUrl || `https://docs.google.com/spreadsheets/d/${state.connection.workspaceSheetId}/edit`,
+      ownerEmail: state.connection.workspaceOwnerEmail,
+      folders: state.connection.workspaceFolders || {},
+    };
+  }
+  return DEFAULT_WORKSPACE;
 }
 
 function calculateAllocation(billId) {
