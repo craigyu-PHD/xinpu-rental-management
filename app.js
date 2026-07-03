@@ -55,10 +55,12 @@ const monthSelector = document.querySelector("#month-selector");
 const loginPanel = document.querySelector("#login-panel");
 const recordModal = document.querySelector("#record-modal");
 const recordForm = document.querySelector("#record-form");
+const storedGoogleSession = loadGoogleSession();
 
 let state = normalizeState(loadLocalState());
-let googleAccessToken = "";
-let googleProfile = JSON.parse(sessionStorage.getItem("rental-google-profile") || "null");
+let googleAccessToken = storedGoogleSession.accessToken;
+let googleAccessTokenExpiresAt = storedGoogleSession.expiresAt;
+let googleProfile = storedGoogleSession.profile;
 let googleTokenClient = null;
 if (monthSelector) monthSelector.value = state.ui.month;
 
@@ -275,16 +277,23 @@ function applyTheme() {
 }
 
 function renderLoginPanel() {
-  const signedIn = Boolean(googleAccessToken && googleProfile?.email);
+  const signedIn = Boolean(googleProfile?.email);
+  const activeToken = hasActiveGoogleToken();
   const statusClass = signedIn ? "success" : GOOGLE_CLIENT_ID ? "" : "danger";
-  const statusText = signedIn ? `已登入：${googleProfile.email}` : GOOGLE_CLIENT_ID ? "尚未登入 Google" : "Google 登入尚未啟用";
+  const statusText = signedIn
+    ? activeToken
+      ? `已登入：${googleProfile.email}`
+      : `已記住帳號：${googleProfile.email}，請重新授權`
+    : GOOGLE_CLIENT_ID
+      ? "尚未登入 Google"
+      : "Google 登入尚未啟用";
   loginPanel.innerHTML = `
     <p class="overline">Google 雲端工作區</p>
     <h3>${signedIn ? escapeHtml(googleProfile.name || "Google 使用者") : "登入 Google 帳號讀取後臺資料"}</h3>
     <div class="sync-pill ${statusClass}">${escapeHtml(statusText)}</div>
     <div class="meta-line">流程：開啟系統 → Google 登入 → 讀取後臺主表 → 上傳附件到 Drive 子資料夾 → 自動把檔案連結回寫主表。</div>
     <div class="toolbar">
-      <button class="cta-btn" id="google-login-button">${signedIn ? "重新授權 Google" : "使用 Google 登入"}</button>
+      <button class="cta-btn" id="google-login-button">${signedIn ? (activeToken ? "重新授權 Google" : "重新連線 Google") : "使用 Google 登入"}</button>
       <a class="soft-btn" href="${DRIVE_WORKSPACE.mainFolderUrl}" target="_blank" rel="noreferrer">雲端資料夾</a>
       <a class="soft-btn" href="${DRIVE_WORKSPACE.sheetUrl}" target="_blank" rel="noreferrer">後臺主表</a>
     </div>
@@ -920,14 +929,15 @@ function handleGoogleLogin() {
           return;
         }
         googleAccessToken = tokenResponse.access_token;
+        googleAccessTokenExpiresAt = Date.now() + Number(tokenResponse.expires_in || 3600) * 1000;
         googleProfile = await fetchGoogleProfile();
-        sessionStorage.setItem("rental-google-profile", JSON.stringify(googleProfile));
+        saveGoogleSession();
         render();
       },
     });
   }
 
-  googleTokenClient.requestAccessToken({ prompt: googleAccessToken ? "" : "consent" });
+  googleTokenClient.requestAccessToken({ prompt: hasActiveGoogleToken() ? "" : "consent" });
 }
 
 async function fetchGoogleProfile() {
@@ -939,7 +949,7 @@ async function fetchGoogleProfile() {
 }
 
 async function uploadAttachmentToDrive(file, meta) {
-  if (!googleAccessToken) {
+  if (!hasActiveGoogleToken()) {
     throw new Error("尚未登入 Google，附件先保留為本機待上傳紀錄。");
   }
 
@@ -987,7 +997,7 @@ function resolveAttachmentFolder(meta) {
 }
 
 async function appendAttachmentToSheet(attachment) {
-  if (!googleAccessToken) return false;
+  if (!hasActiveGoogleToken()) return false;
   await ensureAttachmentSheet();
   const range = encodeURIComponent("附件中心!A:J");
   const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${DRIVE_WORKSPACE.sheetId}/values/${range}:append?valueInputOption=USER_ENTERED`, {
@@ -1490,6 +1500,31 @@ function formatDateTime(value) {
   } catch {
     return value;
   }
+}
+
+function loadGoogleSession() {
+  try {
+    const raw = JSON.parse(sessionStorage.getItem("rental-google-session") || "{}");
+    return {
+      accessToken: raw.accessToken || "",
+      expiresAt: Number(raw.expiresAt || 0),
+      profile: raw.profile || null,
+    };
+  } catch {
+    return { accessToken: "", expiresAt: 0, profile: null };
+  }
+}
+
+function saveGoogleSession() {
+  sessionStorage.setItem("rental-google-session", JSON.stringify({
+    accessToken: googleAccessToken,
+    expiresAt: googleAccessTokenExpiresAt,
+    profile: googleProfile,
+  }));
+}
+
+function hasActiveGoogleToken() {
+  return Boolean(googleAccessToken && googleAccessTokenExpiresAt > Date.now() + 60_000);
 }
 
 function escapeHtml(value) {
