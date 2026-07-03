@@ -6,6 +6,7 @@ const DRIVE_WORKSPACE = {
   mainFolderUrl: "https://drive.google.com/drive/folders/1oU8FGtekTQD9G00UlIAeVZGTFuzNFNpd",
   sheetId: "1Zfc0OvFh3rdHT4qywdcgvH8RpZDaFUKfp-MXkr3mc9k",
   sheetUrl: "https://docs.google.com/spreadsheets/d/1Zfc0OvFh3rdHT4qywdcgvH8RpZDaFUKfp-MXkr3mc9k/edit?usp=drivesdk",
+  ownerEmail: "yu731108@gmail.com",
   folders: {
     backend: "16lepXDUrjYcVBX3kLFHqoOiIW10-2Kqb",
     leases: "1JQAFD5eyujxPEM9sq-IbmWLG5vjOF9I7",
@@ -125,20 +126,14 @@ function buildExcelPreset() {
       { id: "EX-003", date: "2026-04-12", month: "2026-04", type: "設備", scope: "公共", amount: 300, payer: "房東", paid: "是", maintenanceId: "", note: "滅火器 / 蝦皮購買。" },
       { id: "EX-004", date: "2026-05-31", month: "2026-05", type: "水費", scope: "公共", amount: 232, payer: "房東", paid: "是", maintenanceId: "", note: "2月27日～4月30日水費。" },
     ],
-    maintenance: [
-      { id: "MT-304-001", roomId: "304", reporter: "房東", requestDate: "2026-07-07", type: "熱水器", status: "處理中", cost: 3200, owner: "房東", vendor: "待補", doneDate: "", note: "示意維修案件。" },
-    ],
+    maintenance: [],
     deposits: [
       { id: "DP-301", roomId: "301", tenantId: "TEN-301", leaseId: "LE-301-202604", expected: 32000, received: 32000, receiveDate: "2026-04-16", method: "轉帳", status: "保管中", offsetType: "", offsetAmount: 0, refundAmount: 0, refundDate: "", note: "" },
       { id: "DP-302", roomId: "302", tenantId: "TEN-302", leaseId: "LE-302-202604", expected: 30000, received: 30000, receiveDate: "2026-04-25", method: "轉帳", status: "保管中", offsetType: "", offsetAmount: 0, refundAmount: 0, refundDate: "", note: "" },
       { id: "DP-303", roomId: "303", tenantId: "TEN-303", leaseId: "LE-303-202604", expected: 31000, received: 31000, receiveDate: "2026-04-17", method: "轉帳", status: "保管中", offsetType: "", offsetAmount: 0, refundAmount: 0, refundDate: "", note: "" },
       { id: "DP-304", roomId: "304", tenantId: "TEN-304", leaseId: "LE-304-202604", expected: 32000, received: 32000, receiveDate: "2026-04-05", method: "現金", status: "保管中", offsetType: "", offsetAmount: 0, refundAmount: 0, refundDate: "", note: "" },
     ],
-    attachments: [
-      { id: "AT-001", name: "301_租約.pdf", type: "合約", module: "租約", recordId: "LE-301-202604", roomId: "301", tenant: "吳明峰", date: "2026-04-16", url: "drive://leases/301", note: "未來可改為實際 Google Drive 檔案。" },
-      { id: "AT-002", name: "2026-05-06_台電帳單.pdf", type: "帳單", module: "臺電帳單", recordId: "BILL-2026-06", roomId: "", tenant: "", date: "2026-07-01", url: "drive://bills/2026-05-06", note: "帳單附件。" },
-      { id: "AT-003", name: "304_熱水器維修前.jpg", type: "維修照片", module: "維修", recordId: "MT-304-001", roomId: "304", tenant: "", date: "2026-07-07", url: "drive://maintenance/304", note: "維修前照片。" },
-    ],
+    attachments: [],
     ledgerEntries: [
       { id: "LG-001", date: "2026-04-05", month: "2026-04", roomId: "304", item: "4月房租", category: "房租", income: 16000, expense: 0, note: "現金" },
       { id: "LG-002", date: "2026-04-06", month: "2026-04", roomId: "304", item: "公證費", category: "租賃行政", income: 0, expense: 1500, note: "" },
@@ -191,8 +186,8 @@ function buildBlankState() {
 
 function normalizeState(raw) {
   const seed = buildExcelPreset();
-  if (!raw) return seed;
-  return {
+  if (!raw) return sanitizeState(seed);
+  return sanitizeState({
     ...seed,
     ...raw,
     ui: { ...seed.ui, ...(raw.ui || {}) },
@@ -209,14 +204,14 @@ function normalizeState(raw) {
     deposits: Array.isArray(raw.deposits) ? raw.deposits : seed.deposits,
     attachments: Array.isArray(raw.attachments) ? raw.attachments : seed.attachments,
     ledgerEntries: Array.isArray(raw.ledgerEntries) ? raw.ledgerEntries : seed.ledgerEntries,
-  };
+  });
 }
 
 function loadLocalState() {
   const raw = localStorage.getItem(LOCAL_KEY);
   if (!raw) return buildExcelPreset();
   try {
-    return JSON.parse(raw);
+    return sanitizeState(JSON.parse(raw));
   } catch {
     return buildExcelPreset();
   }
@@ -279,6 +274,7 @@ function applyTheme() {
 function renderLoginPanel() {
   const signedIn = Boolean(googleProfile?.email);
   const activeToken = hasActiveGoogleToken();
+  const accessMismatch = signedIn && googleProfile.email !== DRIVE_WORKSPACE.ownerEmail;
   const statusClass = signedIn ? "success" : GOOGLE_CLIENT_ID ? "" : "danger";
   const statusText = signedIn
     ? activeToken
@@ -292,6 +288,7 @@ function renderLoginPanel() {
     <h3>${signedIn ? escapeHtml(googleProfile.name || "Google 使用者") : "登入 Google 帳號讀取後臺資料"}</h3>
     <div class="sync-pill ${statusClass}">${escapeHtml(statusText)}</div>
     <div class="meta-line">流程：開啟系統 → Google 登入 → 讀取後臺主表 → 上傳附件到 Drive 子資料夾 → 自動把檔案連結回寫主表。</div>
+    <div class="meta-line">目前主資料夾建立在 ${escapeHtml(DRIVE_WORKSPACE.ownerEmail)}。${accessMismatch ? "你現在登入的帳號和資料夾擁有者不同，所以點進資料夾會要求權限。" : "若使用同一個擁有者帳號登入，資料會直接存到這個共用資料夾。"} </div>
     <div class="toolbar">
       <button class="cta-btn" id="google-login-button">${signedIn ? (activeToken ? "重新授權 Google" : "重新連線 Google") : "使用 Google 登入"}</button>
       <a class="soft-btn" href="${DRIVE_WORKSPACE.mainFolderUrl}" target="_blank" rel="noreferrer">雲端資料夾</a>
@@ -397,13 +394,13 @@ function renderDashboard() {
       <div class="stack">
         <div>
           <p class="overline">今日重點</p>
-          <h2>把本月應追的房租、電費、退租與維修，集中在一個畫面先處理。</h2>
+          <h2>把本月真正需要處理的房租、電費、退租與附件，集中在一個畫面先處理。</h2>
         </div>
-        <p class="top-note">預設資料已改採你的 Excel 工作簿。資料儲存策略也改為 Google Drive 優先，只要管理端設定好一次，之後使用者登入 Google 帳號即可共用資料。</p>
+        <p class="top-note">首頁只顯示目前真的存在的資料，不再預設塞入示意維修或示意附件。文字數字會優先保存在後臺主表，圖片與 PDF 另存到 Drive 子資料夾。</p>
         <div class="process-inline">
           <span class="flow-inline">1. 入住建檔</span>
           <span class="flow-inline">2. 每月收租與抄表</span>
-          <span class="flow-inline">3. 維修與退租結算</span>
+          <span class="flow-inline">3. 上傳附件與結算</span>
         </div>
         <div class="hero-actions">
           ${actionButton("rent", "補登房租")}
@@ -810,7 +807,7 @@ function renderAttachments() {
             <span>房號：${file.roomId || "無"}</span>
             <span>租客：${file.tenant || "無"}</span>
             <span>日期：${file.date}</span>
-            <span>路徑：${file.url}</span>
+            <span>路徑：${file.url || "尚未上傳到雲端"}</span>
           </div>
         </article>
       `).join("")}
@@ -868,7 +865,7 @@ function renderSettings() {
           <div><p class="overline">Google 雲端入口</p><h3>主資料夾、主表與附件結構</h3></div>
         </div>
         <div class="sync-detail">
-          <div class="alert-card">未來使用方式是：打開網址、登入 Google 帳號、讀取這個出租管理專屬資料夾，然後把後臺主表與附件一起載入。房東、管理者、房東太太只要被共享同一個資料夾，就能看到一致資料。</div>
+          <div class="alert-card">目前資料實際會存到這裡：主資料夾由 ${DRIVE_WORKSPACE.ownerEmail} 建立，後臺主表放在 00_後臺主表，租約、臺電帳單、電表照片、維修附件、收款憑證、租客附件各有自己的子資料夾。</div>
           <div class="toolbar">
             <a class="cta-btn" href="${DRIVE_WORKSPACE.mainFolderUrl}" target="_blank" rel="noreferrer">開啟主資料夾</a>
             <a class="soft-btn" href="${DRIVE_WORKSPACE.sheetUrl}" target="_blank" rel="noreferrer">開啟後臺主表</a>
@@ -1424,6 +1421,13 @@ function buildSummary() {
     unpaidRentRooms: payments.filter((item) => item.amountPaid < item.amountDue),
     unpaidElectricRooms: allocation.filter((item) => item.paid < item.finalDue),
   };
+}
+
+function sanitizeState(rawState) {
+  const next = { ...rawState };
+  next.maintenance = (next.maintenance || []).filter((item) => !String(item.note || "").includes("示意"));
+  next.attachments = (next.attachments || []).filter((item) => !String(item.url || "").startsWith("drive://"));
+  return next;
 }
 
 function calculateAllocation(billId) {
