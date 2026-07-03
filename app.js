@@ -75,6 +75,7 @@ let googleAccessToken = storedGoogleSession.accessToken;
 let googleAccessTokenExpiresAt = storedGoogleSession.expiresAt;
 let googleProfile = storedGoogleSession.profile;
 let googleTokenClient = null;
+let backendSyncTimer = null;
 if (monthSelector) monthSelector.value = state.ui.month;
 
 bootstrap();
@@ -275,6 +276,7 @@ function bindFrameEvents() {
 function persistState() {
   state.connection.lastSyncedAt = new Date().toISOString();
   saveLocalState();
+  scheduleBackendSync();
 }
 
 function render() {
@@ -1298,6 +1300,115 @@ async function initializeActiveWorkspaceSheets({ silent = false } = {}) {
     if (!silent) window.alert(`初始化後臺主表失敗：${error.message}`);
     return false;
   }
+}
+
+function scheduleBackendSync() {
+  if (!hasActiveGoogleToken() || !googleProfile?.email) return;
+  const workspace = getWorkspace();
+  if (!workspace.sheetId) return;
+  if (workspace.ownerEmail && workspace.ownerEmail !== googleProfile.email) return;
+  window.clearTimeout(backendSyncTimer);
+  backendSyncTimer = window.setTimeout(() => {
+    syncStateToBackend().catch((error) => {
+      console.warn("後臺主表同步失敗", error);
+    });
+  }, 1200);
+}
+
+async function syncStateToBackend() {
+  const workspace = getWorkspace();
+  if (!hasActiveGoogleToken() || !workspace.sheetId) return false;
+  await ensureBackendSheets(workspace.sheetId);
+
+  const tables = buildBackendTables();
+  for (const table of tables) {
+    const clearRange = encodeURIComponent(`${table.sheet}!A2:Z`);
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${workspace.sheetId}/values/${clearRange}:clear`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${googleAccessToken}` },
+    });
+
+    if (!table.rows.length) continue;
+    const updateRange = encodeURIComponent(`${table.sheet}!A2`);
+    const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${workspace.sheetId}/values/${updateRange}?valueInputOption=USER_ENTERED`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${googleAccessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ values: table.rows }),
+    });
+    if (!response.ok) throw new Error(await response.text());
+  }
+
+  state.connection.lastSyncedAt = new Date().toISOString();
+  saveLocalState();
+  return true;
+}
+
+function buildBackendTables() {
+  return [
+    {
+      sheet: "房間資料",
+      rows: state.rooms.map((item) => [item.id, item.name, item.status, item.rent, item.deposit, item.rentDay, item.equipment, item.note, state.connection.lastSyncedAt]),
+    },
+    {
+      sheet: "租客資料",
+      rows: state.tenants.map((item) => [item.id, item.name, item.phone, item.line, item.job, item.emergency, item.roomId, item.moveIn, item.moveOut, item.note, state.connection.lastSyncedAt]),
+    },
+    {
+      sheet: "租約資料",
+      rows: state.leases.map((item) => [item.id, item.roomId, item.tenantId, item.startDate, item.endDate, item.rent, item.deposit, item.rentDay, item.status, attachmentLinksFor(item.id), item.note, state.connection.lastSyncedAt]),
+    },
+    {
+      sheet: "收款紀錄",
+      rows: state.rentPayments.map((item) => [item.id, item.month, item.roomId, item.tenantId, item.dueDate, item.amountDue, item.amountPaid, item.paymentDate, item.method, item.status, attachmentLinksFor(item.id), item.note]),
+    },
+    {
+      sheet: "臺電帳單",
+      rows: state.bills.map((item) => [item.id, item.name, item.startDate, item.endDate, item.commonFee, item.indoorFee, item.dueDate, item.paidToTaipower ? "是" : "否", item.payDate, attachmentLinksFor(item.id), item.note]),
+    },
+    {
+      sheet: "電表抄表",
+      rows: state.meterReadings.map((item) => [item.id, item.billId, item.roomId, item.previous, item.current, item.usage, item.payer, attachmentLinksFor(item.id), item.note]),
+    },
+    {
+      sheet: "支出紀錄",
+      rows: state.expenses.map((item) => [item.id, item.date, item.month, item.type, item.scope, item.amount, item.payer, item.paid, item.maintenanceId, attachmentLinksFor(item.id), item.note]),
+    },
+    {
+      sheet: "代租代管",
+      rows: state.managementFees.map((item) => [item.id, item.date, item.month, item.year, item.feeType, item.roomId, item.tenantId, item.contractId, item.baseAmount, item.rate, item.amount, item.vendor, item.status, attachmentLinksFor(item.id), item.note]),
+    },
+    {
+      sheet: "維修紀錄",
+      rows: state.maintenance.map((item) => [item.id, item.roomId, item.reporter, item.requestDate, item.type, item.status, item.cost, item.owner, item.vendor, item.doneDate, attachmentLinksFor(item.id), item.note]),
+    },
+    {
+      sheet: "事件紀錄",
+      rows: state.incidents.map((item) => [item.id, item.date, item.month, item.type, item.roomId, item.tenantId, item.leaseId, item.severity, item.status, item.action, item.evidenceId, item.note]),
+    },
+    {
+      sheet: "附件中心",
+      rows: state.attachments.map((item) => [item.id, item.date, item.module, item.type, item.roomId, item.tenant, item.recordId, item.name, item.url, item.note]),
+    },
+    {
+      sheet: "總帳明細",
+      rows: state.ledgerEntries.map((item) => [item.id, item.date, item.month, item.roomId, item.item, item.category, item.income, item.expense, attachmentLinksFor(item.id), item.note]),
+    },
+    {
+      sheet: "年度索引",
+      rows: buildRelationRows().map((item) => [item.month?.slice(0, 4), item.month, item.roomId, item.tenant, "", item.label.split(" ")[0], item.label, item.attachments, getWorkspace().mainFolderUrl, ""]),
+    },
+  ];
+}
+
+function attachmentLinksFor(recordId) {
+  return state.attachments
+    .filter((item) => item.recordId === recordId)
+    .map((item) => item.url)
+    .filter(Boolean)
+    .join("\n");
 }
 
 async function createDriveFolder(name, parentId = "") {
