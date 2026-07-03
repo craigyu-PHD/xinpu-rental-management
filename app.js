@@ -38,9 +38,12 @@ const MODULES = {
   meters: { id: "meters", title: "電表抄表", group: "finance" },
   allocations: { id: "allocations", title: "電費分攤", group: "finance" },
   expenses: { id: "expenses", title: "支出管理", group: "finance" },
+  managementFees: { id: "managementFees", title: "代租代管", group: "finance" },
   ledger: { id: "ledger", title: "總收支明細", group: "finance" },
   maintenance: { id: "maintenance", title: "維修處理", group: "operations" },
+  incidents: { id: "incidents", title: "事件紀錄", group: "operations" },
   attachments: { id: "attachments", title: "附件中心", group: "operations" },
+  lifecycle: { id: "lifecycle", title: "年度與關聯", group: "analysis" },
   reports: { id: "reports", title: "經營報表", group: "analysis" },
   settings: { id: "settings", title: "系統與儲存", group: "analysis" },
 };
@@ -48,9 +51,9 @@ const MODULES = {
 const NAV_GROUPS = [
   { id: "overview", label: "營運總覽", modules: ["dashboard", "rooms"] },
   { id: "movein", label: "入住與租約", modules: ["tenants", "leases", "deposits"] },
-  { id: "finance", label: "收款與帳務", modules: ["rent", "bills", "meters", "allocations", "expenses", "ledger"] },
-  { id: "operations", label: "維修與附件", modules: ["maintenance", "attachments"] },
-  { id: "analysis", label: "報表與設定", modules: ["reports", "settings"] },
+  { id: "finance", label: "收款與帳務", modules: ["rent", "bills", "meters", "allocations", "expenses", "managementFees", "ledger"] },
+  { id: "operations", label: "維修與附件", modules: ["maintenance", "incidents", "attachments"] },
+  { id: "analysis", label: "報表與設定", modules: ["lifecycle", "reports", "settings"] },
 ];
 
 const roomIds = ["301", "302", "303", "304"];
@@ -141,7 +144,11 @@ function buildExcelPreset() {
       { id: "EX-003", date: "2026-04-12", month: "2026-04", type: "設備", scope: "公共", amount: 300, payer: "房東", paid: "是", maintenanceId: "", note: "滅火器 / 蝦皮購買。" },
       { id: "EX-004", date: "2026-05-31", month: "2026-05", type: "水費", scope: "公共", amount: 232, payer: "房東", paid: "是", maintenanceId: "", note: "2月27日～4月30日水費。" },
     ],
+    managementFees: [
+      { id: "MF-2026-04-304", date: "2026-04-08", month: "2026-04", year: "2026", roomId: "304", tenantId: "TEN-304", feeType: "代租媒合費", baseAmount: 16000, rate: 50, amount: 8000, vendor: "戴先生", status: "已支付", contractId: "LE-304-202604", note: "半個月租金。" },
+    ],
     maintenance: [],
+    incidents: [],
     deposits: [
       { id: "DP-301", roomId: "301", tenantId: "TEN-301", leaseId: "LE-301-202604", expected: 32000, received: 32000, receiveDate: "2026-04-16", method: "轉帳", status: "保管中", offsetType: "", offsetAmount: 0, refundAmount: 0, refundDate: "", note: "" },
       { id: "DP-302", roomId: "302", tenantId: "TEN-302", leaseId: "LE-302-202604", expected: 30000, received: 30000, receiveDate: "2026-04-25", method: "轉帳", status: "保管中", offsetType: "", offsetAmount: 0, refundAmount: 0, refundDate: "", note: "" },
@@ -168,8 +175,10 @@ function buildExcelPreset() {
     ],
     settings: {
       roomStatuses: ["出租中", "空房", "整修中", "即將退租"],
-      expenseTypes: ["水費", "垃圾清潔費", "維修", "設備", "清潔", "耗材", "稅費", "仲介費", "代管費", "租賃行政", "其他"],
+      expenseTypes: ["水費", "垃圾清潔費", "維修", "設備", "清潔", "耗材", "稅費", "保險", "社區管理費", "銀行手續費", "公證費", "仲介費", "代租費", "代管費", "廣告刊登", "法律諮詢", "租賃行政", "其他"],
       repairStatuses: ["待處理", "已派工", "處理中", "已完成", "取消"],
+      incidentTypes: ["鄰里投訴", "違約", "逾期未繳", "水電異常", "安全事件", "災損", "設備遺失", "行政通知", "其他"],
+      managementFeeTypes: ["代租媒合費", "代管月費", "續約服務費", "廣告刊登費", "清潔交屋費", "點交服務費", "其他"],
       electricMode: "臺電帳單分攤模式",
       rounding: "四捨五入至整數元，尾差調整至用電最高房",
     },
@@ -192,7 +201,9 @@ function buildBlankState() {
     bills: [],
     meterReadings: [],
     expenses: [],
+    managementFees: [],
     maintenance: [],
+    incidents: [],
     deposits: [],
     attachments: [],
     ledgerEntries: [],
@@ -215,7 +226,9 @@ function normalizeState(raw) {
     bills: Array.isArray(raw.bills) ? raw.bills : seed.bills,
     meterReadings: Array.isArray(raw.meterReadings) ? raw.meterReadings : seed.meterReadings,
     expenses: Array.isArray(raw.expenses) ? raw.expenses : seed.expenses,
+    managementFees: Array.isArray(raw.managementFees) ? raw.managementFees : seed.managementFees,
     maintenance: Array.isArray(raw.maintenance) ? raw.maintenance : seed.maintenance,
+    incidents: Array.isArray(raw.incidents) ? raw.incidents : seed.incidents,
     deposits: Array.isArray(raw.deposits) ? raw.deposits : seed.deposits,
     attachments: Array.isArray(raw.attachments) ? raw.attachments : seed.attachments,
     ledgerEntries: Array.isArray(raw.ledgerEntries) ? raw.ledgerEntries : seed.ledgerEntries,
@@ -359,9 +372,12 @@ function renderModule() {
     meters: renderMeters,
     allocations: renderAllocations,
     expenses: renderExpenses,
+    managementFees: renderManagementFees,
     ledger: renderLedger,
     maintenance: renderMaintenance,
+    incidents: renderIncidents,
     attachments: renderAttachments,
+    lifecycle: renderLifecycle,
     reports: renderReports,
     settings: renderSettings,
   };
@@ -697,16 +713,17 @@ function renderAllocations() {
 
 function renderExpenses() {
   const monthly = state.expenses.filter((item) => item.month === state.ui.month);
+  const monthlyManagementFees = state.managementFees.filter((item) => item.month === state.ui.month);
   return `
     ${moduleBanner("支出管理", "公共支出與房間支出分開記錄，方便後續計算整體與房間別損益。")}
     <section class="three-grid">
       ${expenseBreakdownCard("公共支出", monthly.filter((item) => item.scope === "公共"))}
       ${expenseBreakdownCard("房間支出", monthly.filter((item) => item.scope !== "公共"))}
-      ${expenseBreakdownCard("未付款支出", monthly.filter((item) => item.paid === "否"))}
+      ${metricCard("代租代管", money.format(sumBy(monthlyManagementFees, "amount")), `${monthlyManagementFees.length} 筆服務費`)}
     </section>
     ${renderTableModule({
       title: "支出明細",
-      subtitle: "水費與垃圾清潔費自動視為房東支出。",
+      subtitle: "支出類型涵蓋水費、清潔、設備、稅費、保險、社區管理、法律、公證、代租與代管等長期經營項目。",
       addKey: "expenses",
       addLabel: "新增支出",
       headers: ["日期", "類型", "歸屬", "金額", "負擔者", "已付款", "備註"],
@@ -722,6 +739,45 @@ function renderExpenses() {
         </tr>
       `).join(""),
     })}
+  `;
+}
+
+function renderManagementFees() {
+  const monthly = state.managementFees.filter((item) => item.month === state.ui.month);
+  const yearly = state.managementFees.filter((item) => item.year === selectedYear());
+  const categoryRows = aggregateBy(monthly, "feeType", "amount");
+  return `
+    ${moduleBanner("代租代管", "把代租媒合、代管月費、續約服務、廣告刊登與點交費用獨立管理，避免混在一般維修支出。")}
+    <section class="three-grid">
+      ${metricCard("本月服務費", money.format(sumBy(monthly, "amount")), `${monthly.length} 筆紀錄`)}
+      ${metricCard("本年度服務費", money.format(sumBy(yearly, "amount")), `${selectedYear()} 年累計`)}
+      ${metricCard("關聯租約", `${new Set(yearly.map((item) => item.contractId).filter(Boolean)).size} 份`, "可回查租約與房號")}
+    </section>
+    <section class="two-grid">
+      <article class="panel chart-panel">
+        <div class="panel-header"><div><p class="overline">服務費結構</p><h3>${state.ui.month}</h3></div></div>
+        ${pieChart(categoryRows.map((item, index) => ({ label: item.key, value: item.total, color: chartColor(index) })))}
+      </article>
+      ${renderTableModule({
+        title: "代租代管明細",
+        subtitle: "每筆費用都保留月份、年度、房號、租客、租約與業者，未來做年度比較時不會混帳。",
+        addKey: "managementFees",
+        addLabel: "新增服務費",
+        headers: ["日期", "類型", "房號", "租客", "計算基礎", "金額", "業者", "狀態"],
+        rows: state.managementFees.map((item) => `
+          <tr>
+            <td>${item.date}</td>
+            <td>${item.feeType}</td>
+            <td>${item.roomId || "公共"}</td>
+            <td>${tenantName(item.tenantId)}</td>
+            <td>${money.format(item.baseAmount)} × ${item.rate || 0}%</td>
+            <td>${money.format(item.amount)}</td>
+            <td>${item.vendor || "未填"}</td>
+            <td>${statusTag(item.status)}</td>
+          </tr>
+        `).join(""),
+      })}
+    </section>
   `;
 }
 
@@ -810,6 +866,38 @@ function renderMaintenance() {
   `;
 }
 
+function renderIncidents() {
+  const monthly = state.incidents.filter((item) => item.month === state.ui.month);
+  const openItems = state.incidents.filter((item) => !["已結案", "取消"].includes(item.status));
+  return `
+    ${moduleBanner("事件紀錄", "把違約、鄰里投訴、災損、逾期、水電異常與行政通知獨立建檔，保留責任歸屬與佐證。")}
+    <section class="three-grid">
+      ${statusSummaryCard("本月事件", monthly)}
+      ${statusSummaryCard("未結案", openItems)}
+      ${metricCard("佐證附件", `${state.attachments.filter((item) => item.module === "事件").length} 件`, "可連到照片、PDF、通知截圖")}
+    </section>
+    ${renderTableModule({
+      title: "事件清單",
+      subtitle: "突發事件可以關聯房號、租客、租約、附件與後續維修或支出。",
+      addKey: "incidents",
+      addLabel: "新增事件",
+      headers: ["事件編號", "日期", "類型", "房號", "租客", "嚴重度", "狀態", "處理摘要"],
+      rows: state.incidents.map((item) => `
+        <tr>
+          <td>${item.id}</td>
+          <td>${item.date}</td>
+          <td>${item.type}</td>
+          <td>${item.roomId || "公共"}</td>
+          <td>${tenantName(item.tenantId)}</td>
+          <td>${statusTag(item.severity)}</td>
+          <td>${statusTag(item.status)}</td>
+          <td>${item.action || item.note || "未填"}</td>
+        </tr>
+      `).join(""),
+    })}
+  `;
+}
+
 function renderAttachments() {
   return `
     ${moduleBanner("附件中心", "租約、帳單、維修照片與收據都集中在這裡管理。")}
@@ -839,6 +927,62 @@ function renderAttachments() {
   `;
 }
 
+function renderLifecycle() {
+  const year = selectedYear();
+  const yearMonths = Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, "0")}`);
+  const yearLedger = state.ledgerEntries.filter((item) => item.month?.startsWith(`${year}-`));
+  const yearFees = state.managementFees.filter((item) => item.year === year || item.month?.startsWith(`${year}-`));
+  const relationRows = buildRelationRows();
+  return `
+    ${moduleBanner("年度與關聯", "從多年經營角度檢查每一筆租客、租約、收款、支出、事件與附件是否有清楚關聯。")}
+    <section class="metric-grid">
+      ${metricCard("年度收入", money.format(sumBy(yearLedger, "income")), `${year} 年`)}
+      ${metricCard("年度支出", money.format(sumBy(yearLedger, "expense") + sumBy(yearFees, "amount")), "含代租代管")}
+      ${metricCard("資料關聯完整度", `${relationScore()} / 100`, "附件、租約、事件、帳務 ID 檢查")}
+      ${metricCard("永久保存節點", `${state.attachments.length} 件`, "Drive 連結與後臺主表互相對應")}
+    </section>
+    <section class="panel timeline-panel">
+      <div class="panel-header"><div><p class="overline">年度月份軸</p><h3>${year} 經營資料密度</h3></div></div>
+      <div class="month-timeline">
+        ${yearMonths.map((month) => {
+          const records = recordCountByMonth(month);
+          return `<div class="month-node ${records ? "active" : ""}"><strong>${month.slice(5)}</strong><span>${records} 筆</span></div>`;
+        }).join("")}
+      </div>
+    </section>
+    <section class="two-grid">
+      <article class="panel">
+        <div class="panel-header"><div><p class="overline">關聯規則</p><h3>資料不能混淆的基礎</h3></div></div>
+        <div class="rule-grid">
+          <div class="rule-card"><strong>月份</strong><span>所有收款、支出、代管費與總帳都使用 YYYY-MM。</span></div>
+          <div class="rule-card"><strong>年度</strong><span>年度分析由月份欄位彙整，保留跨年租約。</span></div>
+          <div class="rule-card"><strong>租客</strong><span>租客 ID 獨立於房號，搬離或再次入住仍可追蹤。</span></div>
+          <div class="rule-card"><strong>附件</strong><span>每張照片或 PDF 都要有 module、recordId、roomId、tenant。</span></div>
+        </div>
+      </article>
+      <article class="panel">
+        <div class="panel-header"><div><p class="overline">關聯索引</p><h3>最近資料</h3></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>資料</th><th>月份</th><th>房號</th><th>租客</th><th>附件</th></tr></thead>
+            <tbody>
+              ${relationRows.map((item) => `
+                <tr>
+                  <td>${item.label}</td>
+                  <td>${item.month}</td>
+                  <td>${item.roomId || "公共"}</td>
+                  <td>${item.tenant}</td>
+                  <td>${item.attachments} 件</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  `;
+}
+
 function renderReports() {
   const summary = buildSummary();
   const roomRows = roomIds.map((roomId) => {
@@ -846,6 +990,9 @@ function renderReports() {
     const roomExpenses = state.expenses.filter((item) => item.month === state.ui.month && item.scope === roomId).reduce((sum, item) => sum + Number(item.amount), 0);
     return { roomId, paidRent, roomExpenses, publicShare: summary.publicExpenseShare, net: paidRent - roomExpenses - summary.publicExpenseShare };
   });
+  const ledgerEntries = state.ledgerEntries.filter((item) => item.month === state.ui.month);
+  const expenseCategories = aggregateLedgerCategories(ledgerEntries.filter((item) => item.expense > 0));
+  const radarMetrics = buildRadarMetrics(summary);
 
   return `
     ${moduleBanner("經營報表", "報表只由逐筆紀錄彙整，避免人工重做總表。")}
@@ -854,6 +1001,16 @@ function renderReports() {
       ${metricCard("年度化房租", money.format(summary.rentPaid * 12), "依目前月資料估算")}
       ${metricCard("年度化支出", money.format(summary.expenses * 12), "依目前月資料估算")}
       ${metricCard("年度化淨利", money.format(summary.netProfit * 12), "依目前月資料估算")}
+    </section>
+    <section class="two-grid">
+      <article class="panel chart-panel">
+        <div class="panel-header"><div><p class="overline">支出圓餅圖</p><h3>${state.ui.month} 支出結構</h3></div></div>
+        ${pieChart(expenseCategories.map((item, index) => ({ label: item.category, value: item.expense, color: chartColor(index) })))}
+      </article>
+      <article class="panel chart-panel">
+        <div class="panel-header"><div><p class="overline">營運雷達圖</p><h3>本月健康檢查</h3></div></div>
+        ${radarChart(radarMetrics)}
+      </article>
     </section>
     ${renderTableModule({
       title: "房間別損益",
@@ -915,6 +1072,16 @@ function renderSettings() {
       <article class="panel">
         <p class="overline">最後更新</p>
         <div class="detail-list"><span>${formatDateTime(state.connection.lastSyncedAt)}</span><span>目前先保存於本機，待正式接上 Google Drive 後同步到共享資料夾。</span></div>
+      </article>
+    </section>
+    <section class="two-grid">
+      <article class="panel">
+        <p class="overline">代租代管類型</p>
+        <div class="inline-pills">${state.settings.managementFeeTypes.map((item) => `<span class="chip">${item}</span>`).join("")}</div>
+      </article>
+      <article class="panel">
+        <p class="overline">事件類型</p>
+        <div class="inline-pills">${state.settings.incidentTypes.map((item) => `<span class="chip">${item}</span>`).join("")}</div>
       </article>
     </section>
   `;
@@ -1200,9 +1367,12 @@ async function ensureBackendSheets(spreadsheetId) {
     ["臺電帳單", ["帳單編號", "帳單名稱", "起始日", "結束日", "公共電費", "室內電費", "繳費期限", "是否已繳臺電", "繳費日", "帳單附件連結", "備註"]],
     ["電表抄表", ["抄表編號", "帳單編號", "房號", "前期度數", "本期度數", "使用度數", "負擔者", "照片連結", "備註"]],
     ["支出紀錄", ["支出編號", "日期", "月份", "類型", "範圍", "金額", "付款者", "是否已付款", "關聯維修", "收據連結", "備註"]],
+    ["代租代管", ["服務費編號", "日期", "月份", "年度", "費用類型", "房號", "租客編號", "租約編號", "計算基礎", "比例", "金額", "業者", "狀態", "附件連結", "備註"]],
     ["維修紀錄", ["維修編號", "房號", "通報者", "通報日", "類型", "狀態", "費用", "負擔者", "廠商", "完成日", "附件連結", "備註"]],
+    ["事件紀錄", ["事件編號", "日期", "月份", "事件類型", "房號", "租客編號", "租約編號", "嚴重度", "狀態", "處理摘要", "附件編號", "備註"]],
     ["附件中心", ["附件編號", "日期", "模組", "類型", "房號", "租客", "關聯紀錄", "檔名", "Drive連結", "備註"]],
     ["總帳明細", ["明細編號", "日期", "月份", "房號", "項目", "分類", "收入", "支出", "附件連結", "備註"]],
+    ["年度索引", ["年度", "月份", "房號", "租客編號", "租約編號", "資料類型", "資料編號", "附件數", "保存位置", "備註"]],
   ];
   sheets
     .filter((item) => !existingSheets.has(item[0]))
@@ -1439,6 +1609,47 @@ function openModal(moduleKey) {
       ],
       save(values) { state.expenses.push({ ...values, amount: Number(values.amount) }); },
     },
+    managementFees: {
+      title: "新增代租代管費用",
+      fields: [
+        inputField("id", "服務費編號", "text"),
+        inputField("date", "發生日", "date"),
+        inputField("month", "歸屬月份", "month"),
+        inputField("year", "年度", "number"),
+        selectField("feeType", "費用類型", state.settings.managementFeeTypes),
+        selectField("roomId", "房號", [{ value: "", label: "公共 / 不指定" }, ...roomIds.map((room) => ({ value: room, label: room }))]),
+        selectField("tenantId", "租客", [{ value: "", label: "不指定" }, ...state.tenants.map((item) => ({ value: item.id, label: item.name }))]),
+        selectField("contractId", "關聯租約", [{ value: "", label: "不指定" }, ...state.leases.map((item) => ({ value: item.id, label: item.id }))]),
+        inputField("baseAmount", "計算基礎金額", "number"),
+        inputField("rate", "比例（%）", "number"),
+        inputField("amount", "實際金額", "number"),
+        inputField("vendor", "業者 / 管理者", "text"),
+        selectField("status", "狀態", ["待支付", "已支付", "爭議中", "免付"]),
+        inputField("note", "備註", "text", true),
+      ],
+      save(values) {
+        const amount = Number(values.amount || 0);
+        const record = {
+          ...values,
+          year: String(values.year || values.month?.slice(0, 4) || selectedYear()),
+          baseAmount: Number(values.baseAmount || 0),
+          rate: Number(values.rate || 0),
+          amount,
+        };
+        state.managementFees.push(record);
+        state.ledgerEntries.push({
+          id: `LG-${record.id}`,
+          date: record.date,
+          month: record.month,
+          roomId: record.roomId || "公共",
+          item: record.feeType,
+          category: record.feeType.includes("代管") ? "代管費" : "代租費",
+          income: 0,
+          expense: amount,
+          note: record.vendor || record.note || "",
+        });
+      },
+    },
     maintenance: {
       title: "新增維修案件",
       fields: [
@@ -1456,13 +1667,31 @@ function openModal(moduleKey) {
       ],
       save(values) { state.maintenance.push({ ...values, cost: Number(values.cost) }); },
     },
+    incidents: {
+      title: "新增事件紀錄",
+      fields: [
+        inputField("id", "事件編號", "text"),
+        inputField("date", "發生日", "date"),
+        inputField("month", "歸屬月份", "month"),
+        selectField("type", "事件類型", state.settings.incidentTypes),
+        selectField("roomId", "房號", [{ value: "", label: "公共 / 不指定" }, ...roomIds.map((room) => ({ value: room, label: room }))]),
+        selectField("tenantId", "租客", [{ value: "", label: "不指定" }, ...state.tenants.map((item) => ({ value: item.id, label: item.name }))]),
+        selectField("leaseId", "關聯租約", [{ value: "", label: "不指定" }, ...state.leases.map((item) => ({ value: item.id, label: item.id }))]),
+        selectField("severity", "嚴重度", ["低", "中", "高"]),
+        selectField("status", "處理狀態", ["待處理", "追蹤中", "已結案", "取消"]),
+        inputField("action", "處理摘要", "text"),
+        inputField("evidenceId", "關聯附件編號", "text"),
+        inputField("note", "備註", "text", true),
+      ],
+      save(values) { state.incidents.push(values); },
+    },
     attachments: {
       title: "新增附件紀錄",
       fields: [
         inputField("id", "附件編號", "text"),
         inputField("name", "附件名稱", "text"),
         inputField("type", "附件類型", "text"),
-        inputField("module", "關聯模組", "text"),
+        selectField("module", "關聯模組", ["租約", "臺電", "電表", "維修", "收款", "租客", "事件", "代租代管", "其他"]),
         inputField("recordId", "關聯資料編號", "text"),
         selectField("roomId", "房號", [{ value: "", label: "無" }, ...roomIds.map((room) => ({ value: room, label: room }))]),
         inputField("tenant", "租客", "text"),
@@ -1554,16 +1783,27 @@ function expenseBreakdownCard(title, items) {
   return `<article class="summary-card"><span class="overline">${title}</span><strong>${money.format(sumBy(items, "amount"))}</strong><span class="muted">${items.length} 筆紀錄</span></article>`;
 }
 
+function aggregateBy(items, key, valueKey) {
+  return Array.from(items.reduce((map, item) => {
+    const groupKey = item[key] || "未分類";
+    const current = map.get(groupKey) || { key: groupKey, total: 0, count: 0 };
+    current.total += Number(item[valueKey] || 0);
+    current.count += 1;
+    map.set(groupKey, current);
+    return map;
+  }, new Map()).values());
+}
+
 function statusSummaryCard(label, items) {
   return `<article class="summary-card"><span class="overline">${label}</span><strong>${items.length} 件</strong><span class="muted">${items.slice(0, 2).map((item) => `${item.roomId} ${item.type}`).join("、") || "目前無案件"}</span></article>`;
 }
 
 function statusTag(status) {
-  const tone = ["已收", "生效中", "出租中", "保管中", "已完成"].includes(status)
+  const tone = ["已收", "生效中", "出租中", "保管中", "已完成", "已支付", "已結案", "低"].includes(status)
     ? "success"
-    : ["部分收", "整修中", "處理中", "已派工", "即將到期"].includes(status)
+    : ["部分收", "整修中", "處理中", "已派工", "即將到期", "中"].includes(status)
       ? "warning"
-      : ["未收", "逾期", "空房", "取消"].includes(status)
+      : ["未收", "逾期", "空房", "取消", "高"].includes(status)
         ? "danger"
         : "warning";
   return `<span class="status-tag ${tone}">${status}</span>`;
@@ -1578,7 +1818,9 @@ function buildSummary() {
   const allocation = calculateAllocation(state.bills.at(-1)?.id);
   const rentDue = sumBy(payments, "amountDue");
   const rentPaid = sumBy(payments, "amountPaid");
-  const expenses = state.expenses.filter((item) => item.month === state.ui.month && item.payer === "房東").reduce((sum, item) => sum + Number(item.amount), 0);
+  const regularExpenses = state.expenses.filter((item) => item.month === state.ui.month && item.payer === "房東").reduce((sum, item) => sum + Number(item.amount), 0);
+  const managementFees = state.managementFees.filter((item) => item.month === state.ui.month).reduce((sum, item) => sum + Number(item.amount), 0);
+  const expenses = regularExpenses + managementFees;
   const electricDue = sumBy(allocation, "finalDue");
   const electricPaid = sumBy(allocation, "paid");
   const publicExpenses = state.expenses.filter((item) => item.month === state.ui.month && item.scope === "公共").reduce((sum, item) => sum + Number(item.amount), 0);
@@ -1588,6 +1830,7 @@ function buildSummary() {
   payments.filter((item) => item.amountPaid < item.amountDue).forEach((item) => reminders.push(`${item.roomId} 房租尚差 ${money.format(item.amountDue - item.amountPaid)}`));
   allocation.filter((item) => item.paid < item.finalDue).forEach((item) => reminders.push(`${item.roomId} 電費尚差 ${money.format(item.finalDue - item.paid)}`));
   state.maintenance.filter((item) => ["待處理", "已派工", "處理中"].includes(item.status)).forEach((item) => reminders.push(`${item.roomId} ${item.type} 維修目前為 ${item.status}`));
+  state.incidents.filter((item) => !["已結案", "取消"].includes(item.status)).forEach((item) => reminders.push(`${item.roomId || "公共"} ${item.type} 事件目前為 ${item.status}`));
 
   return {
     rentDue,
@@ -1595,6 +1838,8 @@ function buildSummary() {
     electricDue,
     electricPaid,
     expenses,
+    regularExpenses,
+    managementFees,
     netProfit: rentPaid - expenses,
     publicExpenseShare: publicExpenses / 4,
     reminders: reminders.slice(0, 8),
@@ -1658,6 +1903,133 @@ function aggregateLedgerCategories(entries) {
     map.set(key, current);
   });
   return [...map.values()].sort((a, b) => (b.income + b.expense) - (a.income + a.expense));
+}
+
+function selectedYear() {
+  return (state.ui.month || defaultMonth).slice(0, 4);
+}
+
+function recordCountByMonth(month) {
+  return [
+    state.rentPayments,
+    state.expenses,
+    state.managementFees,
+    state.ledgerEntries,
+    state.incidents,
+  ].reduce((count, list) => count + list.filter((item) => item.month === month).length, 0);
+}
+
+function buildRelationRows() {
+  const rows = [
+    ...state.leases.map((item) => ({
+      label: `租約 ${item.id}`,
+      month: item.startDate?.slice(0, 7) || "",
+      roomId: item.roomId,
+      tenant: tenantName(item.tenantId),
+      recordId: item.id,
+    })),
+    ...state.managementFees.map((item) => ({
+      label: `服務費 ${item.id}`,
+      month: item.month,
+      roomId: item.roomId,
+      tenant: tenantName(item.tenantId),
+      recordId: item.id,
+    })),
+    ...state.incidents.map((item) => ({
+      label: `事件 ${item.id}`,
+      month: item.month,
+      roomId: item.roomId,
+      tenant: tenantName(item.tenantId),
+      recordId: item.id,
+    })),
+  ];
+
+  return rows.slice(-8).reverse().map((item) => ({
+    ...item,
+    attachments: state.attachments.filter((file) => file.recordId === item.recordId).length,
+  }));
+}
+
+function relationScore() {
+  const checks = [
+    ...state.rentPayments.map((item) => [item.id, item.month, item.roomId, item.tenantId]),
+    ...state.expenses.map((item) => [item.id, item.month, item.type, item.scope]),
+    ...state.managementFees.map((item) => [item.id, item.month, item.year, item.feeType, item.roomId]),
+    ...state.incidents.map((item) => [item.id, item.month, item.date, item.type, item.status]),
+    ...state.attachments.map((item) => [item.id, item.module, item.recordId, item.url]),
+  ];
+  if (!checks.length) return 100;
+  const complete = checks.filter((fields) => fields.every((value) => String(value || "").trim())).length;
+  return Math.round((complete / checks.length) * 100);
+}
+
+function chartColor(index) {
+  return ["#ff7a59", "#ff4fa3", "#6f7cff", "#24c6a5", "#ffc857", "#32a8ff", "#7bd88f", "#f26d85"][index % 8];
+}
+
+function pieChart(items) {
+  const filtered = items.filter((item) => item.value > 0);
+  if (!filtered.length) return `<div class="empty-chart">目前沒有可繪製的資料</div>`;
+  const total = sumBy(filtered, "value");
+  let offset = 0;
+  const segments = filtered.map((item) => {
+    const size = (item.value / total) * 100;
+    const segment = `${item.color} ${offset}% ${offset + size}%`;
+    offset += size;
+    return segment;
+  }).join(", ");
+  return `
+    <div class="chart-layout">
+      <div class="pie-chart" style="background: conic-gradient(${segments});"></div>
+      <div class="chart-legend">
+        ${filtered.map((item) => `<span><i style="background:${item.color}"></i>${item.label} ${money.format(item.value)}</span>`).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function radarChart(items) {
+  const center = 100;
+  const maxRadius = 74;
+  const points = items.map((item, index) => {
+    const angle = (-90 + (360 / items.length) * index) * Math.PI / 180;
+    const radius = maxRadius * (Math.max(0, Math.min(100, item.value)) / 100);
+    return `${center + Math.cos(angle) * radius},${center + Math.sin(angle) * radius}`;
+  }).join(" ");
+  const axes = items.map((item, index) => {
+    const angle = (-90 + (360 / items.length) * index) * Math.PI / 180;
+    const x = center + Math.cos(angle) * maxRadius;
+    const y = center + Math.sin(angle) * maxRadius;
+    const labelX = center + Math.cos(angle) * 92;
+    const labelY = center + Math.sin(angle) * 92;
+    return `<line x1="${center}" y1="${center}" x2="${x}" y2="${y}" /><text x="${labelX}" y="${labelY}">${item.label}</text>`;
+  }).join("");
+  return `
+    <div class="radar-wrap">
+      <svg class="radar-chart" viewBox="0 0 200 200" role="img" aria-label="營運雷達圖">
+        <polygon class="radar-grid" points="100,26 170,76 143,158 57,158 30,76"></polygon>
+        <polygon class="radar-grid inner" points="100,55 142,85 126,134 74,134 58,85"></polygon>
+        <g class="radar-axis">${axes}</g>
+        <polygon class="radar-area" points="${points}"></polygon>
+      </svg>
+      <div class="chart-legend">${items.map((item) => `<span><i style="background:${chartColor(item.value)}"></i>${item.label} ${item.value}</span>`).join("")}</div>
+    </div>
+  `;
+}
+
+function buildRadarMetrics(summary) {
+  const rentRate = summary.rentDue ? Math.round((summary.rentPaid / summary.rentDue) * 100) : 100;
+  const electricRate = summary.electricDue ? Math.round((summary.electricPaid / summary.electricDue) * 100) : 100;
+  const incidentPenalty = Math.min(60, state.incidents.filter((item) => !["已結案", "取消"].includes(item.status)).length * 15);
+  const attachmentRate = relationScore();
+  const profitRate = summary.rentPaid ? Math.max(0, Math.min(100, Math.round((summary.netProfit / summary.rentPaid) * 100))) : 0;
+  return [
+    { label: "收租", value: rentRate },
+    { label: "電費", value: electricRate },
+    { label: "淨利", value: profitRate },
+    { label: "關聯", value: attachmentRate },
+    { label: "風險", value: 100 - incidentPenalty },
+  ];
 }
 
 function monthPayments() {
