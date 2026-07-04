@@ -1,4 +1,4 @@
-const LOCAL_KEY = "tenant-rental-system-v3";
+const LOCAL_KEY = "tenant-rental-system-v4";
 const GOOGLE_CLIENT_ID = window.RENTAL_GOOGLE_CLIENT_ID || localStorage.getItem("rental-google-client-id") || "";
 const GOOGLE_SCOPES = "openid email profile https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets";
 const DEFAULT_WORKSPACE = {
@@ -43,9 +43,9 @@ const MODULES = {
   maintenance: { id: "maintenance", title: "維修處理", group: "operations" },
   incidents: { id: "incidents", title: "事件紀錄", group: "operations" },
   attachments: { id: "attachments", title: "附件中心", group: "operations" },
-  lifecycle: { id: "lifecycle", title: "年度與關聯", group: "analysis" },
-  reports: { id: "reports", title: "經營報表", group: "analysis" },
-  settings: { id: "settings", title: "系統與儲存", group: "analysis" },
+  lifecycle: { id: "lifecycle", title: "年度保存", group: "analysis" },
+  reports: { id: "reports", title: "經營分析", group: "analysis" },
+  settings: { id: "settings", title: "雲端與母版", group: "analysis" },
 };
 
 const NAV_GROUPS = [
@@ -53,7 +53,7 @@ const NAV_GROUPS = [
   { id: "movein", label: "入住與租約", modules: ["tenants", "leases", "deposits"] },
   { id: "finance", label: "收款與帳務", modules: ["rent", "bills", "meters", "allocations", "expenses", "managementFees", "ledger"] },
   { id: "operations", label: "維修與附件", modules: ["maintenance", "incidents", "attachments"] },
-  { id: "analysis", label: "報表與設定", modules: ["lifecycle", "reports", "settings"] },
+  { id: "analysis", label: "報表與儲存", modules: ["reports", "lifecycle", "settings"] },
 ];
 
 const roomIds = ["301", "302", "303", "304"];
@@ -87,7 +87,7 @@ function bootstrap() {
 
 function buildExcelPreset() {
   return {
-    version: 3,
+    version: 4,
     ui: {
       month: "2026-07",
       activeGroup: "overview",
@@ -146,7 +146,14 @@ function buildExcelPreset() {
       { id: "EX-004", date: "2026-05-31", month: "2026-05", type: "水費", scope: "公共", amount: 232, payer: "房東", paid: "是", maintenanceId: "", note: "2月27日～4月30日水費。" },
     ],
     managementFees: [
-      { id: "MF-2026-04-304", date: "2026-04-08", month: "2026-04", year: "2026", roomId: "304", tenantId: "TEN-304", feeType: "代租媒合費", baseAmount: 16000, rate: 50, amount: 8000, vendor: "戴先生", status: "已支付", contractId: "LE-304-202604", note: "半個月租金。" },
+      { id: "MF-2026-04-304-A", date: "2026-04-08", month: "2026-04", year: "2026", roomId: "304", tenantId: "TEN-304", feeType: "代租媒合費", baseAmount: 16000, rate: 50, amount: 8000, vendor: "戴先生", status: "已支付", contractId: "LE-304-202604", note: "Excel 記帳分表：戴先生仲介費（半個月）。" },
+      { id: "MF-2026-04-301-A", date: "2026-04-15", month: "2026-04", year: "2026", roomId: "301", tenantId: "TEN-301", feeType: "代租媒合費", baseAmount: 16000, rate: 50, amount: 8000, vendor: "戴先生", status: "已支付", contractId: "LE-301-202604", note: "Excel 記帳分表：戴先生仲介費（半個月）。" },
+      { id: "MF-2026-04-303-A", date: "2026-04-17", month: "2026-04", year: "2026", roomId: "303", tenantId: "TEN-303", feeType: "代租媒合費", baseAmount: 15500, rate: 50, amount: 7750, vendor: "陳先生", status: "已支付", contractId: "LE-303-202604", note: "Excel 記帳分表：陳先生仲介費（半個月）。" },
+      { id: "MF-2026-04-302-A", date: "2026-04-18", month: "2026-04", year: "2026", roomId: "302", tenantId: "TEN-302", feeType: "代租媒合費", baseAmount: 15000, rate: 50, amount: 7500, vendor: "呂小姐", status: "已支付", contractId: "LE-302-202604", note: "Excel 記帳分表：呂小姐仲介費（半個月）。" },
+      { id: "MF-2026-04-301-M", date: "2026-04-18", month: "2026-04", year: "2026", roomId: "301", tenantId: "TEN-301", feeType: "代管月費", baseAmount: 16000, rate: 50, amount: 8000, vendor: "朱小姐", status: "已支付", contractId: "LE-301-202604", note: "Excel 記帳分表：朱小姐代管服務費（年繳）。" },
+      { id: "MF-2026-04-302-M", date: "2026-04-18", month: "2026-04", year: "2026", roomId: "302", tenantId: "TEN-302", feeType: "代管月費", baseAmount: 15000, rate: 50, amount: 7500, vendor: "朱小姐", status: "已支付", contractId: "LE-302-202604", note: "Excel 記帳分表：朱小姐代管服務費（年繳）。" },
+      { id: "MF-2026-04-303-M", date: "2026-04-18", month: "2026-04", year: "2026", roomId: "303", tenantId: "TEN-303", feeType: "代管月費", baseAmount: 15500, rate: 50, amount: 7750, vendor: "朱小姐", status: "已支付", contractId: "LE-303-202604", note: "Excel 記帳分表：朱小姐代管服務費（年繳）。" },
+      { id: "MF-2026-04-304-M", date: "2026-04-18", month: "2026-04", year: "2026", roomId: "304", tenantId: "TEN-304", feeType: "代管月費", baseAmount: 16000, rate: 50, amount: 8000, vendor: "朱小姐", status: "已支付", contractId: "LE-304-202604", note: "Excel 記帳分表：朱小姐代管服務費（年繳）。" },
     ],
     maintenance: [],
     incidents: [],
@@ -168,11 +175,16 @@ function buildExcelPreset() {
       { id: "LG-008", date: "2026-04-15", month: "2026-04", roomId: "303", item: "4月房租", category: "房租", income: 15500, expense: 0, note: "" },
       { id: "LG-009", date: "2026-05-01", month: "2026-05", roomId: "公共", item: "垃圾清潔費", category: "垃圾清潔費", income: 0, expense: 1200, note: "" },
       { id: "LG-010", date: "2026-05-31", month: "2026-05", roomId: "公共", item: "2月27日～4月30日水費", category: "水費", income: 0, expense: 232, note: "" },
-      { id: "LG-011", date: "2026-07-03", month: "2026-07", roomId: "304", item: "7月房租", category: "房租", income: 16000, expense: 0, note: "" },
-      { id: "LG-012", date: "2026-07-10", month: "2026-07", roomId: "公共", item: "垃圾清潔費", category: "垃圾清潔費", income: 0, expense: 1200, note: "" },
-      { id: "LG-013", date: "2026-07-15", month: "2026-07", roomId: "302", item: "7月房租", category: "房租", income: 15000, expense: 0, note: "" },
-      { id: "LG-014", date: "2026-07-18", month: "2026-07", roomId: "303", item: "7月房租", category: "房租", income: 15500, expense: 0, note: "" },
-      { id: "LG-015", date: "2026-07-18", month: "2026-07", roomId: "301", item: "7月房租", category: "房租", income: 16000, expense: 0, note: "" },
+      { id: "LG-011", date: "2026-06-04", month: "2026-06", roomId: "304", item: "6月房租", category: "房租", income: 16000, expense: 0, note: "依最新營運狀態補正。" },
+      { id: "LG-012", date: "2026-06-15", month: "2026-06", roomId: "302", item: "6月房租", category: "房租", income: 15000, expense: 0, note: "依最新營運狀態補正。" },
+      { id: "LG-013", date: "2026-06-18", month: "2026-06", roomId: "303", item: "6月房租", category: "房租", income: 15500, expense: 0, note: "依最新營運狀態補正。" },
+      { id: "LG-014", date: "2026-06-18", month: "2026-06", roomId: "301", item: "6月房租", category: "房租", income: 16000, expense: 0, note: "依最新營運狀態補正。" },
+      { id: "LG-015", date: "2026-07-01", month: "2026-06", roomId: "公共", item: "5-6月臺電帳單已繳", category: "電費", income: 0, expense: 3871, note: "總表載明已繳。" },
+      { id: "LG-016", date: "2026-07-03", month: "2026-07", roomId: "304", item: "7月房租", category: "房租", income: 16000, expense: 0, note: "" },
+      { id: "LG-017", date: "2026-07-10", month: "2026-07", roomId: "公共", item: "垃圾清潔費", category: "垃圾清潔費", income: 0, expense: 1200, note: "" },
+      { id: "LG-018", date: "2026-07-15", month: "2026-07", roomId: "302", item: "7月房租", category: "房租", income: 15000, expense: 0, note: "" },
+      { id: "LG-019", date: "2026-07-18", month: "2026-07", roomId: "303", item: "7月房租", category: "房租", income: 15500, expense: 0, note: "" },
+      { id: "LG-020", date: "2026-07-18", month: "2026-07", roomId: "301", item: "7月房租", category: "房租", income: 16000, expense: 0, note: "" },
     ],
     settings: {
       roomStatuses: ["出租中", "空房", "整修中", "即將退租"],
@@ -307,6 +319,8 @@ function renderLoginPanel() {
   const activeToken = hasActiveGoogleToken();
   const usingPersonalWorkspace = state.connection.workspaceOwnerEmail === googleProfile?.email;
   const accessMismatch = signedIn && workspace.ownerEmail && googleProfile.email !== workspace.ownerEmail;
+  const onLocalFile = window.location.protocol === "file:";
+  const oauthState = signedIn ? "已登入並可同步" : GOOGLE_CLIENT_ID ? "可登入，但第一次需完成 Google 授權" : "尚未設定 OAuth Client ID";
   const statusClass = signedIn ? "success" : GOOGLE_CLIENT_ID ? "" : "danger";
   const statusText = signedIn
     ? activeToken
@@ -316,11 +330,21 @@ function renderLoginPanel() {
       ? "尚未登入 Google"
       : "Google 登入尚未啟用";
   loginPanel.innerHTML = `
-    <p class="overline">Google 雲端工作區</p>
-    <h3>${signedIn ? escapeHtml(googleProfile.name || "Google 使用者") : "登入 Google 帳號讀取後臺資料"}</h3>
-    <div class="sync-pill ${statusClass}">${escapeHtml(statusText)}</div>
-    <div class="meta-line">流程：開啟系統 → Google 登入 → 讀取後臺主表 → 上傳附件到 Drive 子資料夾 → 自動把檔案連結回寫主表。</div>
-    <div class="meta-line">目前作用中的儲存位置屬於 ${escapeHtml(workspace.ownerEmail || "尚未設定")}。${accessMismatch ? "你現在登入的帳號和資料夾擁有者不同，所以點進資料夾會要求權限。" : "若使用同一個擁有者帳號登入，資料會直接存到這個共用資料夾。"} </div>
+    <div class="login-hero">
+      <div>
+        <p class="overline">Google 雲端工作區</p>
+        <h3>${signedIn ? escapeHtml(googleProfile.name || "Google 使用者") : "登入 Google 帳號接手資料與附件"}</h3>
+      </div>
+      <div class="sync-pill ${statusClass}">${escapeHtml(statusText)}</div>
+    </div>
+    <div class="status-strip">
+      <div class="status-chip"><strong>登入狀態</strong><span>${oauthState}</span></div>
+      <div class="status-chip"><strong>資料擁有者</strong><span>${escapeHtml(workspace.ownerEmail || "尚未指定")}</span></div>
+      <div class="status-chip"><strong>後臺主表</strong><span>${workspace.sheetId ? "已建立" : "尚未建立"}</span></div>
+    </div>
+    <div class="meta-line">流程：開啟網站 → 使用 Google 登入 → 讀取後臺主表 → 在 Drive 子資料夾上傳照片或 PDF → 自動把連結回寫主表。</div>
+    <div class="meta-line">${onLocalFile ? "你現在是用本機 file:// 開啟，Google OAuth 會失敗；請改用 GitHub Pages 網址登入。" : "請從正式網站網址登入，不要用本機 file:// 版本做 Google OAuth。"} ${accessMismatch ? "你現在登入的帳號和資料夾擁有者不同，所以打開資料夾時會跳權限申請。" : "若使用同一個擁有者帳號登入，資料會直接寫進同一組雲端資料夾。"} </div>
+    <div class="meta-line">若 Google 顯示「這個應用程式未經 Google 驗證」，代表 OAuth consent screen 還在測試狀態，第一次授權需按「進階」再繼續。</div>
     <div class="toolbar">
       <button class="cta-btn" id="google-login-button">${signedIn ? (activeToken ? "重新授權 Google" : "重新連線 Google") : "使用 Google 登入"}</button>
       ${signedIn ? `<button class="soft-btn" id="create-drive-workspace">${usingPersonalWorkspace ? "重建我的雲端工作區" : "建立我的雲端工作區"}</button>` : ""}
@@ -419,32 +443,44 @@ function leaseActiveInMonth(lease, month) {
 
 function renderDashboard() {
   const summary = buildSummary();
+  const score = operatingScore(summary);
+  const latestBill = state.bills.at(-1);
+  const focusItems = [
+    `本月房租 ${money.format(summary.rentPaid)} / ${money.format(summary.rentDue)}，${summary.unpaidRentRooms.length ? `仍有 ${summary.unpaidRentRooms.length} 間待追蹤。` : "四間房本月都已完成收款。"}`,
+    latestBill ? `最近一期臺電帳單為 ${latestBill.name}，總額 ${money.format(Number(latestBill.commonFee) + Number(latestBill.indoorFee))}，${latestBill.paidToTaipower ? "已完成對台電付款。" : "尚未繳納。"}`
+      : "目前尚未建立台電帳單資料。",
+    summary.expenses ? `本月已記錄支出 ${money.format(summary.expenses)}，集中於 ${topExpenseLabel(state.ui.month)}。` : "本月尚未建立額外支出資料。",
+  ];
   const progressCards = [
+    { title: "營運總分", value: `${score} 分`, note: scoreLabel(score) },
     { title: "入住建檔", value: `${state.tenants.length} 位租客`, note: `${state.leases.filter((item) => item.status === "生效中").length} 份有效租約` },
-    { title: "本月收租", value: `${money.format(summary.rentPaid)} / ${money.format(summary.rentDue)}`, note: `${summary.unpaidRentRooms.length} 間待追款` },
-    { title: "本月收支", value: money.format(summary.netProfit), note: `收入 ${money.format(summary.rentPaid)}，支出 ${money.format(summary.expenses)}` },
+    { title: "本月收租", value: `${money.format(summary.rentPaid)} / ${money.format(summary.rentDue)}`, note: summary.unpaidRentRooms.length ? `${summary.unpaidRentRooms.length} 間待追款` : "本月已全數收款" },
+    { title: "同步時間", value: formatDateTime(state.connection.lastSyncedAt), note: workspaceStatusText() },
   ];
 
   return `
     <section class="hero-banner">
-      <div class="stack">
-        <div>
-          <p class="overline">今日重點</p>
-          <h2>把本月真正需要處理的房租、電費、退租與附件，集中在一個畫面先處理。</h2>
+      <div class="hero-copy stack">
+        <div class="hero-title-row">
+          <div>
+            <p class="overline">今日重點</p>
+            <h2>用一個高辨識度的營運首頁，先看本月租金、台電、支出與附件是否都已經歸位。</h2>
+          </div>
+          <div class="score-badge ${scoreTone(score)}">${score}</div>
         </div>
-        <p class="top-note">首頁只顯示目前真的存在的資料，不再預設塞入示意維修或示意附件。文字數字會優先保存在後臺主表，圖片與 PDF 另存到 Drive 子資料夾。</p>
-        <div class="process-inline">
-          <span class="flow-inline">1. 入住建檔</span>
-          <span class="flow-inline">2. 每月收租與抄表</span>
-          <span class="flow-inline">3. 上傳附件與結算</span>
+        <p class="top-note">首頁只顯示目前真實存在的資料。文字與數字優先回寫後臺主表，照片、PDF、租約與收據則分類存入 Google Drive 子資料夾。</p>
+        <div class="process-inline process-inline-compact">
+          <span class="flow-inline"><strong>1.</strong> Google 登入並讀取主表</span>
+          <span class="flow-inline"><strong>2.</strong> 每月收租、抄表、記支出</span>
+          <span class="flow-inline"><strong>3.</strong> 上傳附件並自動回寫連結</span>
         </div>
         <div class="hero-actions">
           ${actionButton("rent", "補登房租")}
-          ${actionButton("leases", "新增租約")}
+          ${actionButton("bills", "查看電費")}
           ${actionButton("maintenance", "新增維修")}
         </div>
       </div>
-      <div class="hero-side">
+      <div class="hero-side hero-side-rich">
         ${progressCards.map((item) => `
           <article class="summary-card">
             <span class="overline">${item.title}</span>
@@ -454,11 +490,17 @@ function renderDashboard() {
         `).join("")}
       </div>
     </section>
+    <section class="panel spotlight-panel">
+      <div class="panel-header"><div><p class="overline">本月總覽</p><h3>${state.ui.month} 你真正需要確認的 3 件事</h3></div></div>
+      <div class="focus-grid">
+        ${focusItems.map((item, index) => `<article class="focus-card"><span class="focus-index">0${index + 1}</span><p>${item}</p></article>`).join("")}
+      </div>
+    </section>
     <section class="metric-grid">
       ${metricCard("本月房租已收", money.format(summary.rentPaid), `尚未收 ${money.format(summary.rentDue - summary.rentPaid)}`)}
-      ${metricCard("本月電費應收", money.format(summary.electricDue), `已回收 ${money.format(summary.electricPaid)}`)}
+      ${metricCard("最近一期電費", money.format(summary.electricDue), latestBill?.paidToTaipower ? "已對台電付款" : "待繳台電")}
       ${metricCard("本月支出", money.format(summary.expenses), "房東負擔支出")}
-      ${metricCard("本月淨利", money.format(summary.netProfit), "房租收入 - 房東支出")}
+      ${metricCard("本月淨利", money.format(summary.netProfit), summary.reminders.length ? `${summary.reminders.length} 則待辦提醒` : "目前沒有待辦")}
     </section>
     <section class="three-grid">
       <article class="flow-card">
@@ -935,58 +977,66 @@ function renderLifecycle() {
   const yearLedger = state.ledgerEntries.filter((item) => item.month?.startsWith(`${year}-`));
   const yearFees = state.managementFees.filter((item) => item.year === year || item.month?.startsWith(`${year}-`));
   const relationRows = buildRelationRows();
+  const archiveRules = [
+    { title: "年 / 月層級", note: "所有記錄都用 YYYY-MM，跨年租約也能追蹤。" },
+    { title: "租客獨立 ID", note: "同一人換房或二次入住，不會和舊資料混在一起。" },
+    { title: "附件回寫主表", note: "照片與 PDF 存 Drive，主表只留連結與關聯欄位。" },
+  ];
   return `
-    ${moduleBanner("年度與關聯", "從多年經營角度檢查每一筆租客、租約、收款、支出、事件與附件是否有清楚關聯。")}
+    ${moduleBanner("年度保存", "把年份、月份、租客、租約與附件的關係做成可長期保存的經營年表。")}
     <section class="metric-grid">
       ${metricCard("年度收入", money.format(sumBy(yearLedger, "income")), `${year} 年`)}
       ${metricCard("年度支出", money.format(sumBy(yearLedger, "expense") + sumBy(yearFees, "amount")), "含代租代管")}
       ${metricCard("資料關聯完整度", `${relationScore()} / 100`, "附件、租約、事件、帳務 ID 檢查")}
       ${metricCard("永久保存節點", `${state.attachments.length} 件`, "Drive 連結與後臺主表互相對應")}
     </section>
-    <section class="panel timeline-panel">
-      <div class="panel-header"><div><p class="overline">年度月份軸</p><h3>${year} 經營資料密度</h3></div></div>
-      <div class="month-timeline">
-        ${yearMonths.map((month) => {
-          const records = recordCountByMonth(month);
-          return `<div class="month-node ${records ? "active" : ""}"><strong>${month.slice(5)}</strong><span>${records} 筆</span></div>`;
-        }).join("")}
-      </div>
-    </section>
     <section class="two-grid">
-      <article class="panel">
-        <div class="panel-header"><div><p class="overline">關聯規則</p><h3>資料不能混淆的基礎</h3></div></div>
-        <div class="rule-grid">
-          <div class="rule-card"><strong>月份</strong><span>所有收款、支出、代管費與總帳都使用 YYYY-MM。</span></div>
-          <div class="rule-card"><strong>年度</strong><span>年度分析由月份欄位彙整，保留跨年租約。</span></div>
-          <div class="rule-card"><strong>租客</strong><span>租客 ID 獨立於房號，搬離或再次入住仍可追蹤。</span></div>
-          <div class="rule-card"><strong>附件</strong><span>每張照片或 PDF 都要有 module、recordId、roomId、tenant。</span></div>
+      <article class="panel timeline-panel">
+        <div class="panel-header"><div><p class="overline">年度月份軸</p><h3>${year} 經營資料密度</h3></div></div>
+        <div class="month-timeline">
+          ${yearMonths.map((month) => {
+            const records = recordCountByMonth(month);
+            return `<div class="month-node ${records ? "active" : ""}"><strong>${month.slice(5)}</strong><span>${records} 筆</span></div>`;
+          }).join("")}
         </div>
       </article>
       <article class="panel">
-        <div class="panel-header"><div><p class="overline">關聯索引</p><h3>最近資料</h3></div></div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>資料</th><th>月份</th><th>房號</th><th>租客</th><th>附件</th></tr></thead>
-            <tbody>
-              ${relationRows.map((item) => `
-                <tr>
-                  <td>${item.label}</td>
-                  <td>${item.month}</td>
-                  <td>${item.roomId || "公共"}</td>
-                  <td>${item.tenant}</td>
-                  <td>${item.attachments} 件</td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
+        <div class="panel-header"><div><p class="overline">保存規則</p><h3>避免資料混淆的 3 個原則</h3></div></div>
+        <div class="stack">
+          ${archiveRules.map((item) => `
+            <article class="rule-card compact">
+              <strong>${item.title}</strong>
+              <span>${item.note}</span>
+            </article>
+          `).join("")}
         </div>
       </article>
+    </section>
+    <section class="panel">
+      <div class="panel-header"><div><p class="overline">最近關聯資料</p><h3>近期建立或更新的記錄</h3></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>資料</th><th>月份</th><th>房號</th><th>租客</th><th>附件</th></tr></thead>
+          <tbody>
+            ${relationRows.map((item) => `
+              <tr>
+                <td>${item.label}</td>
+                <td>${item.month}</td>
+                <td>${item.roomId || "公共"}</td>
+                <td>${item.tenant}</td>
+                <td>${item.attachments} 件</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
     </section>
   `;
 }
 
 function renderReports() {
   const summary = buildSummary();
+  const score = operatingScore(summary);
   const roomRows = roomIds.map((roomId) => {
     const paidRent = monthPayments().find((item) => item.roomId === roomId)?.amountPaid || 0;
     const roomExpenses = state.expenses.filter((item) => item.month === state.ui.month && item.scope === roomId).reduce((sum, item) => sum + Number(item.amount), 0);
@@ -994,10 +1044,11 @@ function renderReports() {
   });
   const ledgerEntries = state.ledgerEntries.filter((item) => item.month === state.ui.month);
   const expenseCategories = aggregateLedgerCategories(ledgerEntries.filter((item) => item.expense > 0));
-  const radarMetrics = buildRadarMetrics(summary);
+  const scoreRows = buildScoreRows(summary);
+  const monthTrend = buildMonthlyTrend(selectedYear());
 
   return `
-    ${moduleBanner("經營報表", "報表只由逐筆紀錄彙整，避免人工重做總表。")}
+    ${moduleBanner("經營分析", "用更直觀的分數、趨勢與分類圖來看懂本月狀態，不再用難理解的雷達圖。")}
     <section class="metric-grid">
       ${metricCard("月報房租實收", money.format(summary.rentPaid), state.ui.month)}
       ${metricCard("年度化房租", money.format(summary.rentPaid * 12), "依目前月資料估算")}
@@ -1009,10 +1060,39 @@ function renderReports() {
         <div class="panel-header"><div><p class="overline">支出圓餅圖</p><h3>${state.ui.month} 支出結構</h3></div></div>
         ${pieChart(expenseCategories.map((item, index) => ({ label: item.category, value: item.expense, color: chartColor(index) })))}
       </article>
-      <article class="panel chart-panel">
-        <div class="panel-header"><div><p class="overline">營運雷達圖</p><h3>本月健康檢查</h3></div></div>
-        ${radarChart(radarMetrics)}
+      <article class="panel score-panel">
+        <div class="panel-header"><div><p class="overline">營運分數</p><h3>本月健康檢查</h3></div></div>
+        <div class="score-head">
+          <div class="score-badge ${scoreTone(score)}">${score}</div>
+          <div class="stack">
+            <strong class="score-label">${scoreLabel(score)}</strong>
+            <span class="muted">分數綜合收租完成率、房間滿租度、資料完整度與待處理風險。</span>
+          </div>
+        </div>
+        <div class="score-list">
+          ${scoreRows.map((item) => `
+            <div class="score-row">
+              <div class="split"><strong>${item.label}</strong><span>${item.value} / 100</span></div>
+              <div class="progress-track"><div class="progress-fill" style="width:${item.value}%;"></div></div>
+            </div>
+          `).join("")}
+        </div>
       </article>
+    </section>
+    <section class="panel">
+      <div class="panel-header"><div><p class="overline">年度趨勢</p><h3>${selectedYear()} 月別收入與支出</h3></div></div>
+      <div class="trend-list">
+        ${monthTrend.map((item) => `
+          <div class="trend-row">
+            <strong>${item.month}</strong>
+            <div class="trend-bars">
+              <span class="trend-bar income" style="width:${item.incomeWidth}%;"></span>
+              <span class="trend-bar expense" style="width:${item.expenseWidth}%;"></span>
+            </div>
+            <span class="trend-meta">收 ${money.format(item.income)} / 支 ${money.format(item.expense)}</span>
+          </div>
+        `).join("")}
+      </div>
     </section>
     ${renderTableModule({
       title: "房間別損益",
@@ -1037,17 +1117,20 @@ function renderSettings() {
   const workspace = getWorkspace();
   const folderNames = WORKSPACE_BLUEPRINT.map((item) => item.name).join("、");
   return `
-    ${moduleBanner("系統與儲存", "這裡不再放技術設定，而是直接用你看得懂的資料入口與備份結構說明。")}
+    ${moduleBanner("雲端與母版", "把登入、主表、照片資料夾與預設母版整理成看得懂的雲端工作區。")}
     <section class="two-grid">
       <article class="panel">
         <div class="panel-header">
           <div><p class="overline">Google 雲端入口</p><h3>主資料夾、主表與附件結構</h3></div>
         </div>
         <div class="sync-detail">
-          <div class="alert-card">目前資料實際會存到這裡：主資料夾屬於 ${workspace.ownerEmail || "尚未設定"}，後臺主表放在 01_Excel表，照片與 PDF 會依序進入 ${folderNames} 這些子資料夾。</div>
+          <div class="alert-card">目前資料應存到這裡：主資料夾屬於 ${workspace.ownerEmail || "尚未設定"}，後臺主表放在 01_Excel表，照片與 PDF 依序進入 ${folderNames} 這些子資料夾。</div>
           <div class="toolbar">
             <a class="cta-btn" href="${workspace.mainFolderUrl}" target="_blank" rel="noreferrer">開啟主資料夾</a>
             <a class="soft-btn" href="${workspace.sheetUrl}" target="_blank" rel="noreferrer">開啟後臺主表</a>
+          </div>
+          <div class="storage-map">
+            ${WORKSPACE_BLUEPRINT.map((item, index) => `<div class="storage-node"><span>${String(index + 1).padStart(2, "0")}</span><strong>${item.name}</strong></div>`).join("")}
           </div>
         </div>
       </article>
@@ -1055,7 +1138,7 @@ function renderSettings() {
         <div class="panel-header">
           <div><p class="overline">預設資料</p><h3>以 Excel 工作簿作為系統母版</h3></div>
         </div>
-        <p class="list-note">目前預設資料已依循 \`20260322-新埔八街-收租財報分頁整合.xlsx\` 的房號、租客、租金、押金與每月收支。若只是想清空回到空白專案，也可以一鍵重置。</p>
+        <p class="list-note">目前預設資料已依循 \`20260322-新埔八街-收租財報分頁整合.xlsx\` 的房號、租客、租金、押金、仲介費、代管費與每月收支。若只是想清空回到空白專案，也可以一鍵重置。</p>
         <div class="toolbar wrap-top">
           <button class="cta-btn" id="apply-excel-preset">套用 Excel 預設</button>
           <button class="danger-btn" id="clear-all-data">清空所有資料</button>
@@ -1064,26 +1147,26 @@ function renderSettings() {
     </section>
     <section class="three-grid">
       <article class="panel">
-        <p class="overline">房間狀態</p>
-        <div class="inline-pills">${state.settings.roomStatuses.map((item) => `<span class="chip">${item}</span>`).join("")}</div>
+        <p class="overline">共享與權限</p>
+        <div class="detail-list"><span>建議房東、管理者、代管人員都使用同一組共享 Drive 資料夾。</span><span>若登入帳號不是擁有者，請先由擁有者在 Drive 內直接分享資料夾與主表。</span></div>
       </article>
       <article class="panel">
-        <p class="overline">支出類型</p>
-        <div class="inline-pills">${state.settings.expenseTypes.map((item) => `<span class="chip">${item}</span>`).join("")}</div>
+        <p class="overline">資料更新時間</p>
+        <div class="detail-list"><span>${formatDateTime(state.connection.lastSyncedAt)}</span><span>${workspaceStatusText()}</span></div>
       </article>
       <article class="panel">
-        <p class="overline">最後更新</p>
-        <div class="detail-list"><span>${formatDateTime(state.connection.lastSyncedAt)}</span><span>目前先保存於本機，待正式接上 Google Drive 後同步到共享資料夾。</span></div>
+        <p class="overline">目前母版內容</p>
+        <div class="detail-list"><span>${state.rooms.length} 間房、${state.tenants.length} 位租客、${state.ledgerEntries.length} 筆總帳。</span><span>若主表看起來空白，通常代表 Google 授權尚未完成或尚未同步回寫。</span></div>
       </article>
     </section>
     <section class="two-grid">
       <article class="panel">
-        <p class="overline">代租代管類型</p>
+        <p class="overline">管理費分類</p>
         <div class="inline-pills">${state.settings.managementFeeTypes.map((item) => `<span class="chip">${item}</span>`).join("")}</div>
       </article>
       <article class="panel">
-        <p class="overline">事件類型</p>
-        <div class="inline-pills">${state.settings.incidentTypes.map((item) => `<span class="chip">${item}</span>`).join("")}</div>
+        <p class="overline">主要支出分類</p>
+        <div class="inline-pills">${state.settings.expenseTypes.slice(0, 10).map((item) => `<span class="chip">${item}</span>`).join("")}</div>
       </article>
     </section>
   `;
@@ -1958,6 +2041,74 @@ function buildSummary() {
     unpaidRentRooms: payments.filter((item) => item.amountPaid < item.amountDue),
     unpaidElectricRooms: allocation.filter((item) => item.paid < item.finalDue),
   };
+}
+
+function workspaceStatusText() {
+  const workspace = getWorkspace();
+  if (!workspace.sheetId) return "尚未指定雲端主表";
+  if (!googleProfile?.email) return "尚未登入 Google，資料仍以本機狀態為主";
+  if (workspace.ownerEmail && workspace.ownerEmail !== googleProfile.email) return "目前登入帳號不是資料擁有者，需確認共享權限";
+  return "Google 授權完成後，變更會同步回寫主表";
+}
+
+function topExpenseLabel(month) {
+  const top = aggregateLedgerCategories(state.ledgerEntries.filter((item) => item.month === month && Number(item.expense) > 0))[0];
+  return top ? `${top.category} ${money.format(top.expense)}` : "目前沒有主要支出";
+}
+
+function operatingScore(summary) {
+  const occupancy = state.rooms.length ? Math.round((state.tenants.length / state.rooms.length) * 100) : 0;
+  const rentRate = summary.rentDue ? Math.round((summary.rentPaid / summary.rentDue) * 100) : 100;
+  const relationRate = relationScore();
+  const riskPenalty = Math.min(30, summary.reminders.length * 6);
+  return Math.max(52, Math.min(99, Math.round((occupancy * 0.28) + (rentRate * 0.38) + (relationRate * 0.24) + 10 - riskPenalty)));
+}
+
+function scoreLabel(score) {
+  if (score >= 90) return "穩定營運";
+  if (score >= 80) return "狀態良好";
+  if (score >= 70) return "可持續追蹤";
+  return "需優先整理";
+}
+
+function scoreTone(score) {
+  if (score >= 90) return "tone-good";
+  if (score >= 80) return "tone-bright";
+  if (score >= 70) return "tone-warm";
+  return "tone-alert";
+}
+
+function buildScoreRows(summary) {
+  const occupancy = state.rooms.length ? Math.round((state.tenants.length / state.rooms.length) * 100) : 0;
+  const rentRate = summary.rentDue ? Math.round((summary.rentPaid / summary.rentDue) * 100) : 100;
+  const relationRate = relationScore();
+  const issueRate = Math.max(35, 100 - Math.min(65, summary.reminders.length * 12));
+  return [
+    { label: "收租完成率", value: rentRate },
+    { label: "滿租程度", value: occupancy },
+    { label: "資料完整度", value: relationRate },
+    { label: "待辦風險", value: issueRate },
+  ];
+}
+
+function buildMonthlyTrend(year) {
+  const monthly = Array.from({ length: 12 }, (_, index) => {
+    const month = `${year}-${String(index + 1).padStart(2, "0")}`;
+    const entries = state.ledgerEntries.filter((item) => item.month === month);
+    const feeEntries = state.managementFees.filter((item) => item.month === month || item.year === year && month === `${year}-04` && item.month === "2026-04");
+    return {
+      month: month.slice(5),
+      income: sumBy(entries, "income"),
+      expense: sumBy(entries, "expense") + sumBy(feeEntries, "amount"),
+    };
+  });
+  const maxIncome = Math.max(...monthly.map((item) => item.income), 1);
+  const maxExpense = Math.max(...monthly.map((item) => item.expense), 1);
+  return monthly.map((item) => ({
+    ...item,
+    incomeWidth: Math.max(item.income ? 14 : 0, Math.round((item.income / maxIncome) * 100)),
+    expenseWidth: Math.max(item.expense ? 14 : 0, Math.round((item.expense / maxExpense) * 100)),
+  }));
 }
 
 function sanitizeState(rawState) {
